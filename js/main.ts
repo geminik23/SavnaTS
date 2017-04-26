@@ -1,26 +1,33 @@
 ﻿
-namespace Test {
-	export class Testpage(){
+//namespace Test {
+//	export class Testpage{
 	
-	}
-}
+//	}
+//}
 
 (() => {
-	
+
+
+
 	$avna.Application.Initialize("myCanvas",
 		(err: $avna.AppError, app: $avna.IApplication) => {
 			if (err) return;
 
 			if (app && app.isInitialized()) {
-				// set something
+				// resize to full-size
+				let resize = () => {
+					app.setSize(document.documentElement.clientWidth, document.documentElement.clientHeight);
+				};
 
+				window.onresize = resize;
+				resize();
+
+
+				// app settings
+				app.setAnimating(true); // redraw per every frame
+				app.setLoopInterval(20); //20ms
+				
 				app.start();
 			}
 		});
-	//let app = $avna.Application.GetApplication($avna.Application.Initialize("myCanvas"));
-
-	//if (app.isInitialized()) {
-	//	//app.setInitializePage(new TestPage());	
-	//	app.start();
-	//}
 })();

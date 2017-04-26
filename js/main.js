@@ -1,9 +1,23 @@
+//namespace Test {
+//	export class Testpage{
+//	}
+//}
 (function () {
-    var aid = $avna.Application.Initialize("myCanvas");
-    var app = $avna.Application.GetApplication(aid);
-    if (app.isInitialized()) {
-        //app.setInitializePage(new Justpage());	
-        app.start();
-    }
+    $avna.Application.Initialize("myCanvas", function (err, app) {
+        if (err)
+            return;
+        if (app && app.isInitialized()) {
+            // resize to full-size
+            var resize = function () {
+                app.setSize(document.documentElement.clientWidth, document.documentElement.clientHeight);
+            };
+            window.onresize = resize;
+            resize();
+            // app settings
+            app.setAnimating(true); // redraw per every frame
+            app.setLoopInterval(20); //20ms
+            app.start();
+        }
+    });
 })();
 //# sourceMappingURL=main.js.map
