@@ -36,6 +36,22 @@ var $avna;
         return UniqueId;
     }());
     UniqueId._id = 0;
+    var ManualTimer = (function () {
+        function ManualTimer() {
+            this._timer = 0;
+            this._lastLap = 0;
+        }
+        ManualTimer.prototype.reset = function () { this._lastLap = this._timer = Date.now(); };
+        ManualTimer.prototype.lap = function () {
+            this._lastLap = Date.now();
+            return this._lastLap - this._timer;
+        };
+        ManualTimer.prototype.sinceLastLap = function () {
+            return Date.now() - this._lastLap;
+        };
+        return ManualTimer;
+    }());
+    $avna.ManualTimer = ManualTimer;
     var IntervalChecker = (function () {
         function IntervalChecker() {
             this._started = false;
@@ -293,6 +309,7 @@ var $avna;
         function Graphics(ctx, rect) {
             this.ctx = ctx;
             this.rect = rect;
+            this._stepTime = 0;
         }
         Object.defineProperty(Graphics.prototype, "context", {
             get: function () { return this.ctx; },
@@ -301,6 +318,12 @@ var $avna;
         });
         Object.defineProperty(Graphics.prototype, "boundRect", {
             get: function () { return this.rect; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Graphics.prototype, "stepTime", {
+            get: function () { return this._stepTime; },
+            set: function (time) { this._stepTime = time; },
             enumerable: true,
             configurable: true
         });
@@ -360,6 +383,9 @@ var $avna;
             /* states */
             _this._drawReqeusted = false;
             _this._looping = false;
+            _this._step_timer = new ManualTimer();
+            /* contents*/
+            _this._content = null;
             return _this;
         }
         //
@@ -411,7 +437,16 @@ var $avna;
             this._taskHandlers.processTasks();
             // check redraw and draw
             if (this._looping || this._drawReqeusted) {
-                //TODO draw from navigator!!!
+                this._graphics.stepTime = this._step_timer.sinceLastLap();
+                this._step_timer.lap();
+                // draw content
+                if (this._content) {
+                    this._graphics.boundRect.x = this._graphics.boundRect.y = 0;
+                    this._graphics.boundRect.width = this._graphics.context.canvas.width;
+                    this._graphics.boundRect.height = this._graphics.context.canvas.height;
+                    this._content.draw(this._graphics);
+                }
+                //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 this._drawReqeusted = false;
             }
         };
@@ -420,12 +455,13 @@ var $avna;
         //
         ImpleApplication.prototype.isInitialized = function () { return this._initialized; };
         ImpleApplication.prototype.start = function () {
+            this._step_timer.reset();
             // looping render
             this._loopEngine.loop(LoopType.WindowFrames);
         };
         ImpleApplication.prototype.mouseHandler = function (arg) {
             //TODO
-            console.log(arg.toString());
+            //console.log(arg.toString());
         };
         ImpleApplication.prototype.requestRedraw = function () {
             this._drawReqeusted = true;
@@ -439,14 +475,21 @@ var $avna;
             return this._loopEngine.intervalChecker().interval();
         };
         ImpleApplication.prototype.setSize = function (width, height) {
-            //let c = this._content; // may be PageNavigator
             var _this = this;
+            //let c = this._content; // may be PageNavigator
+            console.log("" + width + "," + height);
             this._taskHandlers.pushTask(function () {
                 _this._graphics.context.canvas.width = width;
                 _this._graphics.context.canvas.height = height;
                 //TODO layout ???may be PageNavigator
             });
             this._drawReqeusted = true;
+        };
+        ImpleApplication.prototype.setContent = function (content) {
+            this._content = content;
+        };
+        ImpleApplication.prototype.getContent = function () {
+            return this._content;
         };
         return ImpleApplication;
     }(EventEmitter));

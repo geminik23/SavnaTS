@@ -24,6 +24,29 @@
 	}
 
 
+	//Timer
+	export interface IManualTimer {
+		reset(): void;
+		lap(): number;
+		sinceLastLap(): number;
+	}
+
+	export class ManualTimer implements IManualTimer {
+		private _timer: number = 0;
+		private _lastLap: number = 0;
+		
+		reset(): void { this._lastLap = this._timer = Date.now(); }
+		lap(): number {
+			this._lastLap = Date.now();
+			return this._lastLap - this._timer;
+		}
+		sinceLastLap(): number {
+			return Date.now() - this._lastLap;
+		}
+	}
+
+
+
 	//Interval Checker
 	export interface IIntervalChecker {
 		start(): void;
@@ -43,12 +66,15 @@
 			this._started = true;
 			this._lastTime = Date.now();
 		}
+
 		stop(): void {
 			this._started = false;
 		}
+
 		reset(): void {
 			this._lastTime = Date.now();
 		}
+
 		checkTick(): boolean {
 			if (!this._started) false;
 			let now = Date.now();
@@ -305,9 +331,12 @@
 
 
 	export class Graphics {
+		private _stepTime: number = 0;
 		constructor(private ctx: CanvasRenderingContext2D, private rect: Rect) { }
 		get context() { return this.ctx; }
 		get boundRect() { return this.rect; }
+		get stepTime() { return this._stepTime; }
+		set stepTime(time: number) { this._stepTime = time; }
 	}
 
 
@@ -384,7 +413,10 @@
 		setLoopInterval(interval:number):void;
 		getLoopInterval():number;
 		setAnimating(animate:boolean):void;
-		getAnimating():boolean;
+		getAnimating(): boolean;
+		setContent(content: IVisualElement): void;
+		getContent(): IVisualElement;
+
 	}
 
 	export interface ApplicationIntializedCallback {
@@ -402,6 +434,11 @@
 		/* states */
 		private _drawReqeusted: boolean = false;
 		private _looping: boolean = false;
+		private _step_timer: ManualTimer = new ManualTimer();
+
+		/* contents*/
+		private _content: IVisualElement = null; 
+		
 
 		//
 		/* no interface member */
@@ -451,8 +488,20 @@
 			
 			// check redraw and draw
 			if (this._looping || this._drawReqeusted) {
-				//TODO draw from navigator!!!
-				
+				this._graphics.stepTime = this._step_timer.sinceLastLap();
+				this._step_timer.lap();
+
+
+				// draw content
+				if (this._content) {
+					this._graphics.boundRect.x = this._graphics.boundRect.y = 0;
+					this._graphics.boundRect.width = this._graphics.context.canvas.width;
+					this._graphics.boundRect.height = this._graphics.context.canvas.height;
+					
+					this._content.draw(this._graphics);
+				}
+
+				//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 				this._drawReqeusted = false;
 			}
 		}
@@ -463,13 +512,14 @@
 		isInitialized(): boolean { return this._initialized; }
 
 		start(): void {
+			this._step_timer.reset();
 			// looping render
 			this._loopEngine.loop(LoopType.WindowFrames);
 		}
 
 		mouseHandler(arg: UserMouseEventArg): void {
 			//TODO
-			console.log(arg.toString());
+			//console.log(arg.toString());
 		}
 
 		requestRedraw(): void {
@@ -490,13 +540,21 @@
 
 		setSize(width: number, height: number): void {
 			//let c = this._content; // may be PageNavigator
-
+			console.log("" + width + "," + height);
 			this._taskHandlers.pushTask(() => {
 				this._graphics.context.canvas.width = width;
 				this._graphics.context.canvas.height = height;
 				//TODO layout ???may be PageNavigator
 			});
 			this._drawReqeusted = true;
+		}
+
+		setContent(content: IVisualElement): void {
+			this._content = content;
+		}
+
+		getContent(): IVisualElement {
+			return this._content;
 		}
 	}
 	

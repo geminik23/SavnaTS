@@ -1,16 +1,13 @@
 ﻿
-
--  setInitialPage
--  
-
-
-
 -  game play page
 -  add page navigator
--  
+-  base structure
+-  VisualElement -> Main Content always canvas size
 
 
 ==========================
-
 -  LoopEngine with IntervalChecker
 -  use loop with windowFrame
+-  ManualTimer for steptime and TestPage
+-  When loaded the page, Canvas resized (on main.ts)
+	used window.innerWidth and window.innerHeight
