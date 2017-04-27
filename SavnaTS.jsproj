@@ -72,6 +72,7 @@
     <Content Include="js\main.js" />
     <Content Include="css\default.css" />
     <Content Include="savna\savna.core.js" />
+    <Content Include="Todo.txt" />
     <TypeScriptCompile Include="js\main.ts" />
     <TypeScriptCompile Include="savna\savna.core.ts" />
     <None Include="SavnaTS_TemporaryKey.pfx" />

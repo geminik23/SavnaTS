@@ -1,7 +1,5 @@
 ﻿
 
--  LoopEngine with IntervalChecker
--  use loop with windowFrame
 -  setInitialPage
 -  
 
@@ -10,3 +8,9 @@
 -  game play page
 -  add page navigator
 -  
+
+
+==========================
+
+-  LoopEngine with IntervalChecker
+-  use loop with windowFrame

@@ -1,8 +1,21 @@
 ﻿namespace $avna {
-
 	//
 	/* base classes */
 	//
+
+	export enum AppErrorType {
+		NullCanvasId,
+		NotFoundCanvas,
+		AlreadyInitializedCanvasId
+	}
+
+	export class AppError {
+		constructor(private errType: AppErrorType) { }
+		get errorType(): AppErrorType { return this.errType; }
+	}
+
+
+	// Unique Id generator
 	class UniqueId {
 		private static _id: number = 0;
 		static GetId(): number {
@@ -10,48 +23,86 @@
 		}
 	}
 
-	// Loop Engine
-	enum LoopType {
+
+	//Interval Checker
+	export interface IIntervalChecker {
+		start(): void;
+		stop(): void;
+		reset(): void;
+		checkTick(): boolean;
+		setInterval(interval_ms: number): void;
+		interval(): number;
+	}
+
+	export class IntervalChecker implements IIntervalChecker {
+		private _lastTime: number;
+		private _started: boolean = false;
+		private _interval: number = 10;
+
+		start(): void {
+			this._started = true;
+			this._lastTime = Date.now();
+		}
+		stop(): void {
+			this._started = false;
+		}
+		reset(): void {
+			this._lastTime = Date.now();
+		}
+		checkTick(): boolean {
+			if (!this._started) false;
+			let now = Date.now();
+			let term = now - this._lastTime - this._interval;
+
+			if (term >= 0) {
+				this._lastTime = now - (term % this._interval);
+				return true;
+			}
+			return false;
+		}
+		setInterval(interval_ms: number): void {
+			this._interval = interval_ms;
+		}
+
+		interval(): number {
+			return this._interval;
+		}
+	}
+
+
+	// LoopEngine
+	export enum LoopType {
 		Stopped = 0, WindowFrames, Interval
 	}
 
 
-	interface ILoopEngine {
+	export interface ILoopEngine {
 		setCallback(cb: (engine: ILoopEngine) => void): void;
 		currentState(): LoopType;
 		isNowLooping(): boolean;
 		loop(type: LoopType, interval: number): void;
 		stop(): void;
 		tick(): void;
+		intervalChecker(): IIntervalChecker;
 	}
 
 
-	class LoopEngine implements ILoopEngine {
-		private _currentState: LoopType = LoopType.Stopped;
-		private _interval_ms = 10;
-
-		private _callback: (arg: any) => void;
+	export class LoopEngine implements ILoopEngine {
+		private _callback: (arg: any) => void; // callback
 
 		private _loop_windowFrame: FrameRequestCallback;
 		private _handle_interval: number;
 
-		private __last_time: number = 0;
-
+		private _intervalChecker: IntervalChecker = new IntervalChecker();
+		private _currentState: LoopType = LoopType.Stopped;
 
 		constructor() {
 			this._loop_windowFrame = (time: number) => {
-				let now = Date.now();
-				var term = (now - this.__last_time) - this._interval_ms;
-
-				if ((term >= 0) && this._currentState == LoopType.WindowFrames) {
-					this.__last_time = now - term;
+				if (this._intervalChecker.checkTick()) {
 					this.tick();
 				}
-
-				window.requestAnimationFrame(this._loop_windowFrame);
+				if (this._currentState == LoopType.WindowFrames) window.requestAnimationFrame(this._loop_windowFrame);
 			};
-
-
 		}
 
 		setCallback(cb: (engine: ILoopEngine) => void): void { this._callback = cb; }
@@ -65,11 +116,11 @@
 			if (this._callback) this._callback(this);
 		}
 
-		loop(type: LoopType, interval: number): void {
+		loop(type: LoopType, interval: number = this._intervalChecker.interval()): void {
 			this.stop();
 
 			this._currentState = type;
-			this._interval_ms = interval;
+			this._intervalChecker.setInterval(interval);
 			switch (type) {
 				case LoopType.WindowFrames:
 					this.loopWindowFrame();
@@ -83,14 +134,17 @@
 			}
 		}
 
+		intervalChecker(): IIntervalChecker { return this._intervalChecker; }
+
 		private loopWindowFrame() {
-			this.__last_time = Date.now();
+			this._intervalChecker.reset();
 			this._loop_windowFrame(0);
 		}
 
 		private loopInterval() {
-			this._handle_interval = setInterval(() => { this.tick(); }, this._interval_ms);
+			this._handle_interval = setInterval(() => { this.tick(); }, this._intervalChecker.interval());
 		}
+
 
 	}
 
@@ -99,8 +153,13 @@
 	export interface EventCallback {
 		(...args: any[]): void;
 	}
+	export interface IEventEmitter {
+		on(type: string, listener: EventCallback): void;
+		emit(type: string, ...args: any[]): void;
+		emitAsync(type: string, ...args: any[]): void;
+	}
 
-	export class EventEmitter {
+	export class EventEmitter implements IEventEmitter{
 		private _events: any = {};
 
 
@@ -138,47 +197,7 @@
 	}
 
 
-
-	//Interval Checker
-	export interface IIntervalChecker {
-		start(): void;
-		stop(): void;
-		reset(): void;
-		checkTick(): boolean;
-		setInterval(interval_ms: number): void;
-	}
-
-	export class IntervalChecker implements IIntervalChecker {
-		private _lastTime: number;
-		private _started: boolean = false;
-		private _interval: number = 10;
-
-		start(): void {
-			this._started = true;
-			this._lastTime = Date.now();
-		}
-		stop(): void {
-			this._started = false;
-		}
-		reset(): void {
-			this._lastTime = Date.now();
-		}
-		checkTick(): boolean {
-			if (!this._started) false;
-			let now = Date.now();
-			let term = this._lastTime - now - this._interval;
-
-			if (term >= 0) {
-				this._lastTime = now - term;
-				return true;
-			}
-			return false;
-		}
-		setInterval(interval_ms: number): void {
-			this._interval = interval_ms;
-		}
-	}
-
+	
 
 
 	// TaskHandler
@@ -230,14 +249,19 @@
 	}
 
 
+	//
+	// Exported Interfaces
+	//
+	export interface IClonable<T> {
+		clone(): T;
+	}
+
+	export interface IVisualElement {
+		draw(g: Graphics): void;
+	}
 
 
-
-
-
-
-
-
+	// VisualElement -> UIElement(Interactive) 
 
 
 
@@ -248,17 +272,22 @@
 	//
 
 
-	export class Point {
+	export class Point implements IClonable<Point>{
 		constructor(public x: number = 0, public y: number = 0) { }
-	}
-	export class Size {
-		constructor(public width: number = 0, public height: number = 0) { }
-	}
-	export class Rect {
-		constructor(public x: number = 0, public y: number = 0, public width: number = 0, public height: number = 0) { }
+		clone() { return new Point(this.x, this.y);}
 	}
 
-	export class Color {
+	export class Size implements IClonable<Size>{
+		constructor(public width: number = 0, public height: number = 0) { }
+		clone() { return new Size(this.width, this.height);}
+	}
+
+	export class Rect implements IClonable<Rect>{
+		constructor(public x: number = 0, public y: number = 0, public width: number = 0, public height: number = 0) { }
+		clone() { return new Rect(this.x, this.y, this.width, this.height);}
+	}
+
+	export class Color implements IClonable<Color>{
 		constructor(public r: number = 0, public g: number = 0, public b: number = 0, public a: number = 0) { }
 		set(r, g, b, a) {
 			this.r = r;
@@ -275,7 +304,11 @@
 	}
 
 
-
+	export class Graphics {
+		constructor(private ctx: CanvasRenderingContext2D, private rect: Rect) { }
+		get context() { return this.ctx; }
+		get boundRect() { return this.rect; }
+	}
 
 
 
@@ -317,8 +350,10 @@
 		MouseDown, MouseMove, MouseUp, MouseOver, MouseOut,
 		TouchStart, TouchMove, TouchEnd, TouchCancel
 	}
+
 	export class UserMouseEventArg {
 		constructor(public type: UserPointType, public x: number, public y: number, public handle: any = null) { }
+		toString(): string { return "[type:"+UserPointType[this.type as number]+"] x:" + this.x+", y:" + this.y;}
 	}
 
 	function CreateMouseEventArg(type: UserPointType, x: number, y: number, canvas: HTMLCanvasElement) {
@@ -331,58 +366,57 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 	//
 	/* application */
 	//
 	class CanvasApp {
 		constructor(public canvasId: string, public application: IApplication) { }
 	}
-	type KeyMap = { [key: string]: CanvasApp };
 
+	type CanvasAppMap = { [key: string]: CanvasApp }; // [appid : CanvasApp]
 
-	export class Graphics {
-		constructor(private ctx: CanvasRenderingContext2D, private rect: Rect) { }
-		get context() { return this.ctx; }
-		get boundRect() { return this.rect; }
-	}
-
-	export interface IApplication {
+	export interface IApplication extends IEventEmitter{
 		start(): void;
 		mouseHandler(arg: UserMouseEventArg): void;
 		requestRedraw(): void;
-		//TODO
+		isInitialized(): boolean;
+		setSize(width:number, height:number):void;
+		setLoopInterval(interval:number):void;
+		getLoopInterval():number;
+		setAnimating(animate:boolean):void;
+		getAnimating():boolean;
 	}
 
+	export interface ApplicationIntializedCallback {
+		(err:AppError, app: IApplication): void;
+	}
 
 	// Internal Applications
-	class ImpleApplication implements IApplication {
-		private _started: boolean = false;
+	class ImpleApplication extends EventEmitter implements IApplication {
+		private _initialized: boolean = false;
 		private _canvasId: string = null;
 		private _graphics: Graphics;
-		/* no interface member */
-		setCanvasId(id: string): void { this._canvasId = id; }
+		private _taskHandlers: TaskHanlder = new TaskHanlder();
+		private _loopEngine: LoopEngine = new LoopEngine();
 
-		/* IApplication interface*/
-		start(): void {
-			if (this._started) return;
-			if (this._canvasId == null) return; //throw?
-			this._started = true;
+		/* states */
+		private _drawReqeusted: boolean = false;
+		private _looping: boolean = false;
+
+		//
+		/* no interface member */
+		//
+		setCanvasId(id: string): void { this._canvasId = id; }
+		initialize(appcb: ApplicationIntializedCallback): void {
+			if (this._canvasId == null) { appcb(new AppError(AppErrorType.NullCanvasId), null); return; }
+			this._initialized = true;
+
+			// init
+			this._loopEngine.setCallback(this.oninternalloop.bind(this));
 
 			let init = () => {
 				let canvas = document.getElementById(this._canvasId) as HTMLCanvasElement;
-				if (canvas == null) return;
+				if (canvas == null) { appcb(new AppError(AppErrorType.NotFoundCanvas), null); return; }
 
 				// init graphics
 				this._graphics = new Graphics(canvas.getContext("2d"), new Rect());
@@ -404,44 +438,103 @@
 					this.mouseHandler(CreateMouseEventArg(UserPointType.MouseOut, (e as MouseEvent).clientX, (e as MouseEvent).clientY, canvas));
 				});
 
-
-
-				//TODO taskHandler -> 
-				//TODO emit events
-
-				//TODO looping render
+				appcb(null, this);
 			};
 
 			if (document.readyState === "complete" || document.readyState === "loaded") init();
 			else document.addEventListener('DOMContentLoaded', init);
 		}
 
+		private oninternalloop(loop: ILoopEngine) {
+			// process tasks
+			this._taskHandlers.processTasks();
+			
+			// check redraw and draw
+			if (this._looping || this._drawReqeusted) {
+				//TODO draw from navigator!!!
+				
+				this._drawReqeusted = false;
+			}
+		}
+
+		//
+		/* IApplication interface*/
+		//
+		isInitialized(): boolean { return this._initialized; }
+
+		start(): void {
+			// looping render
+			this._loopEngine.loop(LoopType.WindowFrames);
+		}
+
 		mouseHandler(arg: UserMouseEventArg): void {
 			//TODO
+			console.log(arg.toString());
 		}
+
 		requestRedraw(): void {
-			//TODO
+			this._drawReqeusted = true;
 		}
 
+		setAnimating(animate: boolean): void { this._looping = animate; }
+
+		getAnimating(): boolean { return this._looping; }
+
+		setLoopInterval(interval: number): void {
+			this._loopEngine.intervalChecker().setInterval(interval);
+		}
+
+		getLoopInterval(): number {
+			return this._loopEngine.intervalChecker().interval();
+		}
+
+		setSize(width: number, height: number): void {
+			//let c = this._content; // may be PageNavigator
+
+			this._taskHandlers.pushTask(() => {
+				this._graphics.context.canvas.width = width;
+				this._graphics.context.canvas.height = height;
+				//TODO layout ???may be PageNavigator
+			});
+			this._drawReqeusted = true;
+		}
 	}
+	
 
 
 
 
-
-
+	
 	export class Application {
-		private static _apps: KeyMap = {};
+		private static _apps: CanvasAppMap = {};
 
-		static Initialize(canvasId: string): string {
+		static Initialize(canvasId: string, appcb: ApplicationIntializedCallback): string {
+			// check already has canvasid
+			let appid: string = null;
+			if ((appid = Application.GetAppId(canvasId)) != null)
+			{
+				appcb(new AppError(AppErrorType.AlreadyInitializedCanvasId), null);
+				return appid;
+			}
+
 			let app = new ImpleApplication();
 			let canvasApp = new CanvasApp(canvasId, app);
-			let appid = "appid" + UniqueId.GetId();
+			appid = "appid" + UniqueId.GetId();
+
 			Application._apps[appid] = canvasApp;
 
 			app.setCanvasId(canvasId);
+			app.initialize(appcb);
 
 			return appid;
+		}
+
+		static GetAppId(canvasId: string): string {
+			for (let key in Application._apps) {
+				if (Application._apps[key].canvasId == canvasId)
+					return key;
+			}
+			return null;
 		}
 
 		static GetApplication(appId: string): IApplication {

@@ -1,14 +1,10 @@
-﻿
-//namespace Test {
+﻿//namespace Test {
 //	export class Testpage{
 	
 //	}
 //}
 
 (() => {
-
-
-
 	$avna.Application.Initialize("myCanvas",
 		(err: $avna.AppError, app: $avna.IApplication) => {
 			if (err) return;

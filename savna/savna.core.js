@@ -1,8 +1,32 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var $avna;
 (function ($avna) {
     //
     /* base classes */
     //
+    var AppErrorType;
+    (function (AppErrorType) {
+        AppErrorType[AppErrorType["NullCanvasId"] = 0] = "NullCanvasId";
+        AppErrorType[AppErrorType["NotFoundCanvas"] = 1] = "NotFoundCanvas";
+        AppErrorType[AppErrorType["AlreadyInitializedCanvasId"] = 2] = "AlreadyInitializedCanvasId";
+    })(AppErrorType = $avna.AppErrorType || ($avna.AppErrorType = {}));
+    var AppError = (function () {
+        function AppError(errType) {
+            this.errType = errType;
+        }
+        Object.defineProperty(AppError.prototype, "errorType", {
+            get: function () { return this.errType; },
+            enumerable: true,
+            configurable: true
+        });
+        return AppError;
+    }());
+    $avna.AppError = AppError;
+    // Unique Id generator
     var UniqueId = (function () {
         function UniqueId() {
         }
@@ -12,27 +36,59 @@ var $avna;
         return UniqueId;
     }());
     UniqueId._id = 0;
-    // Loop Engine
+    var IntervalChecker = (function () {
+        function IntervalChecker() {
+            this._started = false;
+            this._interval = 10;
+        }
+        IntervalChecker.prototype.start = function () {
+            this._started = true;
+            this._lastTime = Date.now();
+        };
+        IntervalChecker.prototype.stop = function () {
+            this._started = false;
+        };
+        IntervalChecker.prototype.reset = function () {
+            this._lastTime = Date.now();
+        };
+        IntervalChecker.prototype.checkTick = function () {
+            if (!this._started)
+                false;
+            var now = Date.now();
+            var term = now - this._lastTime - this._interval;
+            if (term >= 0) {
+                this._lastTime = now - (term % this._interval);
+                return true;
+            }
+            return false;
+        };
+        IntervalChecker.prototype.setInterval = function (interval_ms) {
+            this._interval = interval_ms;
+        };
+        IntervalChecker.prototype.interval = function () {
+            return this._interval;
+        };
+        return IntervalChecker;
+    }());
+    $avna.IntervalChecker = IntervalChecker;
+    // LoopEngine
     var LoopType;
     (function (LoopType) {
         LoopType[LoopType["Stopped"] = 0] = "Stopped";
         LoopType[LoopType["WindowFrames"] = 1] = "WindowFrames";
         LoopType[LoopType["Interval"] = 2] = "Interval";
-    })(LoopType || (LoopType = {}));
+    })(LoopType = $avna.LoopType || ($avna.LoopType = {}));
     var LoopEngine = (function () {
         function LoopEngine() {
             var _this = this;
+            this._intervalChecker = new IntervalChecker();
             this._currentState = LoopType.Stopped;
-            this._interval_ms = 10;
-            this.__last_time = 0;
             this._loop_windowFrame = function (time) {
-                var now = Date.now();
-                var term = (now - _this.__last_time) - _this._interval_ms;
-                if ((term >= 0) && _this._currentState == LoopType.WindowFrames) {
-                    _this.__last_time = now - term;
+                if (_this._intervalChecker.checkTick()) {
                     _this.tick();
                 }
-                window.requestAnimationFrame(_this._loop_windowFrame);
+                if (_this._currentState == LoopType.WindowFrames)
+                    window.requestAnimationFrame(_this._loop_windowFrame);
             };
         }
         LoopEngine.prototype.setCallback = function (cb) { this._callback = cb; };
@@ -48,9 +104,10 @@ var $avna;
                 this._callback(this);
         };
         LoopEngine.prototype.loop = function (type, interval) {
+            if (interval === void 0) { interval = this._intervalChecker.interval(); }
             this.stop();
             this._currentState = type;
-            this._interval_ms = interval;
+            this._intervalChecker.setInterval(interval);
             switch (type) {
                 case LoopType.WindowFrames:
                     this.loopWindowFrame();
@@ -63,16 +120,18 @@ var $avna;
                     break;
             }
         };
+        LoopEngine.prototype.intervalChecker = function () { return this._intervalChecker; };
         LoopEngine.prototype.loopWindowFrame = function () {
-            this.__last_time = Date.now();
+            this._intervalChecker.reset();
             this._loop_windowFrame(0);
         };
         LoopEngine.prototype.loopInterval = function () {
             var _this = this;
-            this._handle_interval = setInterval(function () { _this.tick(); }, this._interval_ms);
+            this._handle_interval = setInterval(function () { _this.tick(); }, this._intervalChecker.interval());
         };
         return LoopEngine;
     }());
+    $avna.LoopEngine = LoopEngine;
     var EventEmitter = (function () {
         function EventEmitter() {
             this._events = {};
@@ -127,38 +186,6 @@ var $avna;
         return EventEmitter;
     }());
     $avna.EventEmitter = EventEmitter;
-    var IntervalChecker = (function () {
-        function IntervalChecker() {
-            this._started = false;
-            this._interval = 10;
-        }
-        IntervalChecker.prototype.start = function () {
-            this._started = true;
-            this._lastTime = Date.now();
-        };
-        IntervalChecker.prototype.stop = function () {
-            this._started = false;
-        };
-        IntervalChecker.prototype.reset = function () {
-            this._lastTime = Date.now();
-        };
-        IntervalChecker.prototype.checkTick = function () {
-            if (!this._started)
-                false;
-            var now = Date.now();
-            var term = this._lastTime - now - this._interval;
-            if (term >= 0) {
-                this._lastTime = now - term;
-                return true;
-            }
-            return false;
-        };
-        IntervalChecker.prototype.setInterval = function (interval_ms) {
-            this._interval = interval_ms;
-        };
-        return IntervalChecker;
-    }());
-    $avna.IntervalChecker = IntervalChecker;
     var TaskHanlder = (function () {
         function TaskHanlder() {
             this._tasks = [];
@@ -195,6 +222,7 @@ var $avna;
         return TaskHanlder;
     }());
     $avna.TaskHanlder = TaskHanlder;
+    // VisualElement -> UIElement(Interactive) 
     //
     /* */
     //
@@ -205,6 +233,7 @@ var $avna;
             this.x = x;
             this.y = y;
         }
+        Point.prototype.clone = function () { return new Point(this.x, this.y); };
         return Point;
     }());
     $avna.Point = Point;
@@ -215,6 +244,7 @@ var $avna;
             this.width = width;
             this.height = height;
         }
+        Size.prototype.clone = function () { return new Size(this.width, this.height); };
         return Size;
     }());
     $avna.Size = Size;
@@ -229,6 +259,7 @@ var $avna;
             this.width = width;
             this.height = height;
         }
+        Rect.prototype.clone = function () { return new Rect(this.x, this.y, this.width, this.height); };
         return Rect;
     }());
     $avna.Rect = Rect;
@@ -258,6 +289,24 @@ var $avna;
         return Color;
     }());
     $avna.Color = Color;
+    var Graphics = (function () {
+        function Graphics(ctx, rect) {
+            this.ctx = ctx;
+            this.rect = rect;
+        }
+        Object.defineProperty(Graphics.prototype, "context", {
+            get: function () { return this.ctx; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Graphics.prototype, "boundRect", {
+            get: function () { return this.rect; },
+            enumerable: true,
+            configurable: true
+        });
+        return Graphics;
+    }());
+    $avna.Graphics = Graphics;
     //
     /* event classes */
     //
@@ -281,6 +330,7 @@ var $avna;
             this.y = y;
             this.handle = handle;
         }
+        UserMouseEventArg.prototype.toString = function () { return "[type:" + UserPointType[this.type] + "] x:" + this.x + ", y:" + this.y; };
         return UserMouseEventArg;
     }());
     $avna.UserMouseEventArg = UserMouseEventArg;
@@ -298,44 +348,39 @@ var $avna;
         }
         return CanvasApp;
     }());
-    var Graphics = (function () {
-        function Graphics(ctx, rect) {
-            this.ctx = ctx;
-            this.rect = rect;
-        }
-        Object.defineProperty(Graphics.prototype, "context", {
-            get: function () { return this.ctx; },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Graphics.prototype, "boundRect", {
-            get: function () { return this.rect; },
-            enumerable: true,
-            configurable: true
-        });
-        return Graphics;
-    }());
-    $avna.Graphics = Graphics;
     // Internal Applications
-    var ImpleApplication = (function () {
+    var ImpleApplication = (function (_super) {
+        __extends(ImpleApplication, _super);
         function ImpleApplication() {
-            this._started = false;
-            this._canvasId = null;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._initialized = false;
+            _this._canvasId = null;
+            _this._taskHandlers = new TaskHanlder();
+            _this._loopEngine = new LoopEngine();
+            /* states */
+            _this._drawReqeusted = false;
+            _this._looping = false;
+            return _this;
         }
+        //
         /* no interface member */
+        //
         ImpleApplication.prototype.setCanvasId = function (id) { this._canvasId = id; };
-        /* IApplication interface*/
-        ImpleApplication.prototype.start = function () {
+        ImpleApplication.prototype.initialize = function (appcb) {
             var _this = this;
-            if (this._started)
+            if (this._canvasId == null) {
+                appcb(new AppError(AppErrorType.NullCanvasId), null);
                 return;
-            if (this._canvasId == null)
-                return; //throw?
-            this._started = true;
+            }
+            this._initialized = true;
+            // init
+            this._loopEngine.setCallback(this.oninternalloop.bind(this));
             var init = function () {
                 var canvas = document.getElementById(_this._canvasId);
-                if (canvas == null)
+                if (canvas == null) {
+                    appcb(new AppError(AppErrorType.NotFoundCanvas), null);
                     return;
+                }
                 // init graphics
                 _this._graphics = new Graphics(canvas.getContext("2d"), new Rect());
                 // mouse event
@@ -354,33 +399,81 @@ var $avna;
                 canvas.addEventListener("mouseout", function (e) {
                     _this.mouseHandler(CreateMouseEventArg(UserPointType.MouseOut, e.clientX, e.clientY, canvas));
                 });
-                //TODO taskHandler -> 
-                //TODO emit events
-                //TODO looping render
+                appcb(null, _this);
             };
             if (document.readyState === "complete" || document.readyState === "loaded")
                 init();
             else
                 document.addEventListener('DOMContentLoaded', init);
         };
+        ImpleApplication.prototype.oninternalloop = function (loop) {
+            // process tasks
+            this._taskHandlers.processTasks();
+            // check redraw and draw
+            if (this._looping || this._drawReqeusted) {
+                //TODO draw from navigator!!!
+                this._drawReqeusted = false;
+            }
+        };
+        //
+        /* IApplication interface*/
+        //
+        ImpleApplication.prototype.isInitialized = function () { return this._initialized; };
+        ImpleApplication.prototype.start = function () {
+            // looping render
+            this._loopEngine.loop(LoopType.WindowFrames);
+        };
         ImpleApplication.prototype.mouseHandler = function (arg) {
             //TODO
+            console.log(arg.toString());
         };
         ImpleApplication.prototype.requestRedraw = function () {
-            //TODO
+            this._drawReqeusted = true;
+        };
+        ImpleApplication.prototype.setAnimating = function (animate) { this._looping = animate; };
+        ImpleApplication.prototype.getAnimating = function () { return this._looping; };
+        ImpleApplication.prototype.setLoopInterval = function (interval) {
+            this._loopEngine.intervalChecker().setInterval(interval);
+        };
+        ImpleApplication.prototype.getLoopInterval = function () {
+            return this._loopEngine.intervalChecker().interval();
+        };
+        ImpleApplication.prototype.setSize = function (width, height) {
+            //let c = this._content; // may be PageNavigator
+            var _this = this;
+            this._taskHandlers.pushTask(function () {
+                _this._graphics.context.canvas.width = width;
+                _this._graphics.context.canvas.height = height;
+                //TODO layout ???may be PageNavigator
+            });
+            this._drawReqeusted = true;
         };
         return ImpleApplication;
-    }());
+    }(EventEmitter));
     var Application = (function () {
         function Application() {
         }
-        Application.Initialize = function (canvasId) {
+        Application.Initialize = function (canvasId, appcb) {
+            // check already has canvasid
+            var appid = null;
+            if ((appid = Application.GetAppId(canvasId)) != null) {
+                appcb(new AppError(AppErrorType.AlreadyInitializedCanvasId), null);
+                return appid;
+            }
             var app = new ImpleApplication();
             var canvasApp = new CanvasApp(canvasId, app);
-            var appid = "appid" + UniqueId.GetId();
+            appid = "appid" + UniqueId.GetId();
             Application._apps[appid] = canvasApp;
             app.setCanvasId(canvasId);
+            app.initialize(appcb);
             return appid;
+        };
+        Application.GetAppId = function (canvasId) {
+            for (var key in Application._apps) {
+                if (Application._apps[key].canvasId == canvasId)
+                    return key;
+            }
+            return null;
         };
         Application.GetApplication = function (appId) {
             return Application._apps[appId].application;
