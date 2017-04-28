@@ -1,5 +1,5 @@
 ﻿namespace Test {
-	export class Testpage implements $avna.IVisualElement{
+	export class Testpage implements $avna.core.UIComponent{
 		draw(g: $avna.Graphics): void {
 			let ctx = g.context;
 			let rect = g.boundRect;

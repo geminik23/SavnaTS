@@ -238,7 +238,6 @@ var $avna;
         return TaskHanlder;
     }());
     $avna.TaskHanlder = TaskHanlder;
-    // VisualElement -> UIElement(Interactive) 
     //
     /* */
     //
@@ -330,6 +329,44 @@ var $avna;
         return Graphics;
     }());
     $avna.Graphics = Graphics;
+    //
+    /* Core UIs */
+    //
+    var core;
+    (function (core) {
+        var VisualComponent = (function () {
+            function VisualComponent() {
+            }
+            VisualComponent.prototype.draw = function (g) { };
+            return VisualComponent;
+        }());
+        core.VisualComponent = VisualComponent;
+        var UIComponent = (function (_super) {
+            __extends(UIComponent, _super);
+            function UIComponent() {
+                return _super !== null && _super.apply(this, arguments) || this;
+            }
+            return UIComponent;
+        }(VisualComponent));
+        core.UIComponent = UIComponent;
+        var StyleComponent = (function (_super) {
+            __extends(StyleComponent, _super);
+            function StyleComponent() {
+                return _super !== null && _super.apply(this, arguments) || this;
+            }
+            return StyleComponent;
+        }(UIComponent));
+        core.StyleComponent = StyleComponent;
+        var BaseStage = (function () {
+            function BaseStage() {
+                this.initializeUI();
+            }
+            BaseStage.prototype.draw = function (g) { };
+            BaseStage.prototype.initializeUI = function () { };
+            return BaseStage;
+        }());
+        core.BaseStage = BaseStage;
+    })(core = $avna.core || ($avna.core = {}));
     //
     /* event classes */
     //

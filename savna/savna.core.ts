@@ -34,7 +34,7 @@
 	export class ManualTimer implements IManualTimer {
 		private _timer: number = 0;
 		private _lastLap: number = 0;
-		
+
 		reset(): void { this._lastLap = this._timer = Date.now(); }
 		lap(): number {
 			this._lastLap = Date.now();
@@ -185,7 +185,7 @@
 		emitAsync(type: string, ...args: any[]): void;
 	}
 
-	export class EventEmitter implements IEventEmitter{
+	export class EventEmitter implements IEventEmitter {
 		private _events: any = {};
 
 
@@ -223,7 +223,7 @@
 	}
 
 
-	
+
 
 
 	// TaskHandler
@@ -282,12 +282,6 @@
 		clone(): T;
 	}
 
-	export interface IVisualElement {
-		draw(g: Graphics): void;
-	}
-
-
-	// VisualElement -> UIElement(Interactive) 
 
 
 
@@ -300,17 +294,17 @@
 
 	export class Point implements IClonable<Point>{
 		constructor(public x: number = 0, public y: number = 0) { }
-		clone() { return new Point(this.x, this.y);}
+		clone() { return new Point(this.x, this.y); }
 	}
 
 	export class Size implements IClonable<Size>{
 		constructor(public width: number = 0, public height: number = 0) { }
-		clone() { return new Size(this.width, this.height);}
+		clone() { return new Size(this.width, this.height); }
 	}
 
 	export class Rect implements IClonable<Rect>{
 		constructor(public x: number = 0, public y: number = 0, public width: number = 0, public height: number = 0) { }
-		clone() { return new Rect(this.x, this.y, this.width, this.height);}
+		clone() { return new Rect(this.x, this.y, this.width, this.height); }
 	}
 
 	export class Color implements IClonable<Color>{
@@ -341,6 +335,53 @@
 
 
 
+	//
+	/* UserInterface */
+	//
+	export namespace ui {
+
+		export namespace core {
+
+			export interface IVisualComponent {
+				draw(g: Graphics): void;
+			}
+
+			export interface IContainer extends IVisualComponent {
+
+			}
+
+			export interface IStage extends IContainer {
+				initializeUI(): void;
+			}
+
+			export interface ILayout {
+
+			}
+
+			export class VisualComponent implements IVisualComponent {
+				draw(g: Graphics): void { }
+			}
+
+			export class UIComponent extends VisualComponent {
+
+			}
+
+			export class StyleComponent extends UIComponent {
+
+			}
+
+			export class BaseStage implements IStage {
+				constructor() {
+					this.initializeUI();
+				}
+
+				draw(g: Graphics): void { }
+				initializeUI(): void { }
+			}
+		}
+
+	}
+	
 
 
 
@@ -382,7 +423,7 @@
 
 	export class UserMouseEventArg {
 		constructor(public type: UserPointType, public x: number, public y: number, public handle: any = null) { }
-		toString(): string { return "[type:"+UserPointType[this.type as number]+"] x:" + this.x+", y:" + this.y;}
+		toString(): string { return "[type:" + UserPointType[this.type as number] + "] x:" + this.x + ", y:" + this.y; }
 	}
 
 	function CreateMouseEventArg(type: UserPointType, x: number, y: number, canvas: HTMLCanvasElement) {
@@ -404,23 +445,23 @@
 
 	type CanvasAppMap = { [key: string]: CanvasApp }; // [appid : CanvasApp]
 
-	export interface IApplication extends IEventEmitter{
+	export interface IApplication extends IEventEmitter {
 		start(): void;
 		mouseHandler(arg: UserMouseEventArg): void;
 		requestRedraw(): void;
 		isInitialized(): boolean;
-		setSize(width:number, height:number):void;
-		setLoopInterval(interval:number):void;
-		getLoopInterval():number;
-		setAnimating(animate:boolean):void;
+		setSize(width: number, height: number): void;
+		setLoopInterval(interval: number): void;
+		getLoopInterval(): number;
+		setAnimating(animate: boolean): void;
 		getAnimating(): boolean;
-		setContent(content: IVisualElement): void;
-		getContent(): IVisualElement;
+		setContent(content: core.IVisualComponent): void;
+		getContent(): core.IVisualComponent;
 
 	}
 
 	export interface ApplicationIntializedCallback {
-		(err:AppError, app: IApplication): void;
+		(err: AppError, app: IApplication): void;
 	}
 
 	// Internal Applications
@@ -437,8 +478,8 @@
 		private _step_timer: ManualTimer = new ManualTimer();
 
 		/* contents*/
-		private _content: IVisualElement = null; 
-		
+		private _content: core.IVisualComponent = null;
+
 
 		//
 		/* no interface member */
@@ -485,7 +526,7 @@
 		private oninternalloop(loop: ILoopEngine) {
 			// process tasks
 			this._taskHandlers.processTasks();
-			
+
 			// check redraw and draw
 			if (this._looping || this._drawReqeusted) {
 				this._graphics.stepTime = this._step_timer.sinceLastLap();
@@ -497,7 +538,7 @@
 					this._graphics.boundRect.x = this._graphics.boundRect.y = 0;
 					this._graphics.boundRect.width = this._graphics.context.canvas.width;
 					this._graphics.boundRect.height = this._graphics.context.canvas.height;
-					
+
 					this._content.draw(this._graphics);
 				}
 
@@ -549,28 +590,27 @@
 			this._drawReqeusted = true;
 		}
 
-		setContent(content: IVisualElement): void {
+		setContent(content: core.IVisualComponent): void {
 			this._content = content;
 		}
 
-		getContent(): IVisualElement {
+		getContent(): core.IVisualComponent {
 			return this._content;
 		}
 	}
-	
 
 
 
 
-	
+
+
 	export class Application {
 		private static _apps: CanvasAppMap = {};
 
 		static Initialize(canvasId: string, appcb: ApplicationIntializedCallback): string {
 			// check already has canvasid
 			let appid: string = null;
-			if ((appid = Application.GetAppId(canvasId)) != null)
-			{
+			if ((appid = Application.GetAppId(canvasId)) != null) {
 				appcb(new AppError(AppErrorType.AlreadyInitializedCanvasId), null);
 				return appid;
 			}
