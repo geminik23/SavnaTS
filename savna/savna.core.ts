@@ -3,6 +3,8 @@
 	/* base classes */
 	//
 
+
+
 	export enum AppErrorType {
 		NullCanvasId,
 		NotFoundCanvas,
@@ -14,6 +16,218 @@
 		get errorType(): AppErrorType { return this.errType; }
 	}
 
+
+	// Stack
+	interface IStack<T> {
+		hasElement(): boolean;
+		pop(): T;
+		push(element: T): void;
+		peek(): T;
+		size(): number;
+	}
+
+	class Stack<T> implements IStack<T>{
+		private _data: Array<T> = new Array<T>();
+
+		hasElement(): boolean {
+			return this._data.length != 0;
+		}
+
+		size(): number { return this._data.length; }
+
+		pop(): T {
+			if (!this.hasElement()) return null;
+			let t = this._data[this._data.length - 1];
+			this._data = this._data.slice(0, this._data.length - 1);
+			return t;
+		}
+
+		push(element: T) {
+			this._data.push(element);
+		}
+
+		peek(): T {
+			if (!this.hasElement()) return null;
+			return this._data[this._data.length - 1];
+		}
+	}
+
+	// Linked List
+	export interface IForEach<T> {
+		(item: T): void;
+	}
+
+	export interface LinkedListNode<T> {
+		element: T;
+		next: LinkedListNode<T>;
+	}
+
+	export interface ILinkedList<T> {
+		begin(): LinkedListNode<T>;
+		end(): LinkedListNode<T>;
+		clear(): void;
+		pushBack(element: T);
+		pushFront(element: T);
+		popFront(): T;
+		popBack(): T;
+		insert(element: T, index: number): boolean;
+		indexOf(element: T): number;
+		contains(element: T): boolean;
+		remove(element: T): boolean;
+		removeAt(index: number): T;
+		elementAt(index: number): T;
+		size(): number;
+		foreach(each: IForEach<T>): void;
+	}
+
+	export class LinkedList<T> implements ILinkedList<T>{
+		private _beginNode: LinkedListNode<T> = null;
+		private _endNode: LinkedListNode<T> = null;
+		private _length: number = 0;
+
+		constructor() { }
+
+		begin(): LinkedListNode<T> { return this._beginNode; }
+
+		end(): LinkedListNode<T> { return this._endNode; }
+
+		clear(): void {
+			this._beginNode = null;
+			this._endNode = null;
+			this._length = 0;
+		}
+
+		pushBack(ele: T) {
+			const node = { element: ele, next: null };
+			if (this._length == 0) {
+				this._beginNode = node;
+				this._endNode = node;
+			} else {
+				this._endNode.next = node;
+				this._endNode = node;
+			}
+			this._length++;
+		}
+
+		pushFront(ele: T) {
+			const node = { element: ele, next: null };
+			if (this._length == 0) {
+				this._beginNode = node;
+				this._endNode = node;
+			} else {
+				node.next = this._beginNode;
+				this._beginNode = node;
+			}
+			this._length++;
+		}
+
+		popFront(): T {
+			let result: T = null;
+			if (this._length == 0) return result;
+
+			result = this._beginNode.element;
+			this._beginNode = this._beginNode.next;
+
+			this._length--;
+			return result;
+
+		}
+
+		popBack(): T {
+			let result: T = null;
+			if (this._length == 0) return result;
+			if (this._length == 1) {
+				result = this._beginNode.element;
+				this.clear();
+				return result;
+			}
+			let t = this.nodeAt(this._length - 2);
+			result = t.next.element;
+			this._endNode = t;
+			t.next = null;
+
+			this._length--;
+			return result;
+		}
+
+		insert(ele: T, index: number): boolean {
+			const node = { element: ele, next: null };
+			if (index == 0) {
+				node.next = this._beginNode.next;
+				this._beginNode = node;
+				this._length++;
+				return true;
+			}
+			if (index == this._length) {
+				this.pushBack(ele); return true;
+			}
+			let pnode = this.nodeAt(index - 1);
+
+			if (pnode == null) return false;
+			node.next = pnode.next;
+			pnode.next = node;
+			this._length++;
+			return true;
+		}
+
+		private nodeAt(index: number): LinkedListNode<T> {
+			if (index < 0 || index >= this._length) return null;
+			if (index == this._length - 1) return this._endNode;
+			let cur = this._beginNode;
+			for (let i = 0; i < index; i++) {
+				cur = cur.next;
+			}
+			return cur;
+		}
+
+		indexOf(ele: T): number {
+			let cur = this._beginNode;
+			let idx = 0;
+			while (cur != null) {
+				if (cur.element === ele) return idx;
+				idx++;
+				cur = cur.next;
+			}
+			return -1;
+		}
+
+		contains(element: T): boolean {
+			return this.indexOf(element) != -1;
+		}
+
+		remove(element: T): boolean {
+			let idx = this.indexOf(element);
+			if (idx == -1) return false;
+			this.removeAt(idx);
+			return true;
+		}
+
+		removeAt(index: number): T {
+			if (index < 0 || index >= this._length) return null;
+			if (index == this._length - 1) return this.popBack();
+			if (index == 0) return this.popFront();
+			let t = this.nodeAt(index - 1);
+			let ele = t.element;
+			t.next = t.next.next;
+			this._length--;
+			return ele;
+		}
+
+		elementAt(index: number): T {
+			let n = this.nodeAt(index);
+			return (n == null) ? null : n.element;
+		}
+
+		size(): number { return this._length; }
+
+		foreach(each: IForEach<T>): void {
+			let cur = this._beginNode;
+			while (cur) {
+				each(cur.element);
+				cur = cur.next;
+			}
+		}
+	}
 
 	// Unique Id generator
 	class UniqueId {
@@ -286,21 +500,23 @@
 
 
 
-
 	//
 	/* */
 	//
-
+	export interface Size {
+		width: number;
+		height: number;
+	}
 
 	export class Point implements IClonable<Point>{
 		constructor(public x: number = 0, public y: number = 0) { }
 		clone() { return new Point(this.x, this.y); }
 	}
 
-	export class Size implements IClonable<Size>{
-		constructor(public width: number = 0, public height: number = 0) { }
-		clone() { return new Size(this.width, this.height); }
-	}
+	//export class Size implements IClonable<Size>{
+	//	constructor(public width: number = 0, public height: number = 0) { }
+	//	clone() { return new Size(this.width, this.height); }
+	//}
 
 	export class Rect implements IClonable<Rect>{
 		constructor(public x: number = 0, public y: number = 0, public width: number = 0, public height: number = 0) { }
@@ -335,53 +551,394 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	//
+	/* ErrorExceptions */
+	//
+	export interface IError {
+		getErrorMessage(): string;
+	}
+	export class BaseError implements IError {
+		private _errorMsg: string;
+		constructor(msg: string) { this._errorMsg = msg; }
+		getErrorMessage(): string { return this._errorMsg; }
+	}
+
+	export class ArgumentError extends BaseError {
+
+	}
+
+
 	//
 	/* UserInterface */
 	//
 	export namespace ui {
 
+
+		export namespace layout {
+			export interface ILayout {
+				setTarget(obj: any): void;
+				getTarget(): any;
+			}
+		}
+
 		export namespace core {
+			enum InvalidateType {
+				All,
+				Size,
+				Position,
+				State
+			}
+
+
+			export interface IInvalidate { // this is for InvalidationCenter //TODO
+
+			}
 
 			export interface IVisualComponent {
-				draw(g: Graphics): void;
+				measureRequest(availableSize: Size): Size;
+				renderingRequest(g: Graphics): void;
 			}
+
+			export class VisualComponent extends EventEmitter implements IVisualComponent {
+				private _x: number;
+				private _y: number;
+				protected scaleX: number;
+				protected scaleY: number;
+				protected stage: Page;
+				protected parent: VisualComponent;
+				protected appId: string = null;
+
+				get x(): number { return this._x; }
+				set x(nx: number) { this._x = nx; }
+				get y(): number { return this._y; }
+				set y(ny: number) { this._y = ny; }
+				
+
+				measureRequest(availableSize: Size): Size {
+					let s = this.measureOverride(availableSize);
+					if (s != null) return s;
+					return this.internalMeasure(availableSize);
+				}
+				protected measureOverride(available: Size): Size { return null; }
+				protected internalMeasure(available: Size): Size { return available; }
+
+				renderingRequest(g: Graphics): void {
+					if (this.drawOverride(g)) return;
+					this.internalDraw(g);
+				}
+				protected internalDraw(g: Graphics): void { }
+				protected drawOverride(g: Graphics): boolean { return false; }
+
+			}
+
+
 
 			export interface IContainer extends IVisualComponent {
-
+				addChild(child: VisualComponent): VisualComponent;
+				addChildAt(child: VisualComponent, index: number): VisualComponent;
+				childAt(idx: number): VisualComponent;
+				numOfChildren(): number;
+				removeChild(child: VisualComponent): VisualComponent;
+				removeChildAt(idx: number): VisualComponent;
+				getLayout(): ui.layout.ILayout;
+				setLayout(layout: ui.layout.ILayout): void;
+				getContentWidth(): number;
+				getContentHeight(): number;
+				moveToFront(child: VisualComponent): void;
+				moveToBack(child: VisualComponent): void;
 			}
 
-			export interface IStage extends IContainer {
+			export interface IPage extends IContainer {
 				initializeUI(): void;
+				setNavigator(navigator: IPageNavigator): void;
+				navigated(arg: any): void;
 			}
 
-			export interface ILayout {
+			export interface IPageNavigator {
+				initialPage(pageType: any): void;
+				navigate(pageType: any, argumnet: any): void;
+				hasPage(): boolean;
+				hasInitialPage(): boolean;
+				canGoBack(): boolean;
+				goBack(): void;
+				pageCount(): number;
+				topPage(): ui.core.IPage;
 
 			}
 
-			export class VisualComponent implements IVisualComponent {
-				draw(g: Graphics): void { }
-			}
+
 
 			export class UIComponent extends VisualComponent {
+				private _enabled: boolean;
+				private _width: number;
+				private _height: number;
+				protected startWidth: number;
+				protected startHeight: number;
+				private _minWidth: number = 0;
+				private _minHeight: number = 0;
 
+
+				private _includeInLayout: boolean = true;
+
+				private _explicitWidth: number;
+				private _explicitHeight: number;
+
+				protected displayListIsInvalid: Boolean = false;
+				protected propertiesAreInvalid: Boolean = false;
+				protected stateChanged: Boolean;
+				protected sizeChange: Boolean;
+
+				constructor() { super(); this.init(); }
+
+				protected init() {
+
+				}
+
+				get minWidth(): number { return this._minWidth; }
+				set minWidth(width: number) {
+					if (this._minWidth != width) {
+						this._minWidth = width;
+						this.notifyLayoutChangedToParents();
+					}
+					return;
+				}
+
+				get minHeight(): number { return this._minHeight; }
+				set minHeight(height: number) {
+					if (this._minHeight != height) {
+						this._minHeight = height;
+						this.notifyLayoutChangedToParents();
+					}
+					return;
+				}
+
+				get enabled(): boolean {
+					return this._enabled;
+				}
+
+				set enabled(enable: boolean) {
+					if (enable == this._enabled) {
+						return;
+					}
+					this._enabled = enable;
+					this.stateChanged = true;
+						//invalidate
+				}
+
+
+				setPosition(x: number, y: number): void {
+					this.x = x;
+					this.y = y;
+					return;
+				}
+
+				setActualSize(width: number, height: number): void {
+					if (this._width != width) {
+						this._width = height;
+						this.sizeChange = true;
+					}
+					if (this._height != height) {
+						this._height = height;
+						this.sizeChange = true;
+					}
+					if (this.sizeChange) {
+						//invalidate
+					}
+				}
+
+
+				childChanged(child: VisualComponent = null): boolean { return true; }
+
+				protected notifyLayoutChangedToParents(): void {
+					if (!this.parent) return;
+					let cur: UIComponent = this;
+					let p: UIComponent = null;
+					while (cur) {
+						p = (cur.parent as UIComponent);
+						if (p && !p.childChanged(cur)) break;
+						cur = p;
+					}
+				}
+
+				protected notifyToParentLayoutChanged(): void {
+					if (!this.parent) return;
+					let p = this.parent as UIComponent;
+					if (p && p.childChanged(null)) p.notifyLayoutChangedToParents();
+				}
+
+				protected flushCache(): void { return; }
+
+				getWidth(): number { return this._width; }
+				setWidth(w: number) {
+					if (this._explicitWidth != w) {
+						this._explicitWidth = w;
+					}
+					if (this._width != w) {
+						this._width = w;
+						this.sizeChange = true;
+						//this.invalidateDisplayList();
+					}
+				}
+				getHeight(): number { return this._height; }
+				setHeight(h: number) {
+					if (this._explicitHeight != h) {
+						this._explicitHeight = h;
+					}
+					if (this._height != h) {
+						this._height = h;
+						this.sizeChange = true;
+						//this.invalidateDisplayList();
+					}
+				}
+
+				get explicitWidth(): number { return this._explicitWidth; }
+				get explicitHeight(): number { return this._explicitHeight; }
+				get scaleX(): number { return this._width / this.startWidth; }
+				set scaleX(sx: number) { this._width = this.startWidth * sx; }
+				get scaleY(): number { return this._height / this.startHeight; }
+				set scaleY(sy: number) { this._height = this.startHeight * sy; }
+				get includeInLayout(): boolean { return this._includeInLayout; }
+
+				set includeInLayout(i: boolean) {
+					if (i != this._includeInLayout) {
+						this._includeInLayout = i;
+						//this.parentStructuralChange();
+					}
+				}
 			}
+
+
+
+			export class Container extends UIComponent implements IContainer {
+				private _childContainer: LinkedList<VisualComponent> = new LinkedList<VisualComponent>();
+				private _layout: ui.layout.ILayout;
+				private _updateLayout: boolean;
+
+				addChild(child: VisualComponent): VisualComponent { this._childContainer.pushBack(child); this.structureChange(); return child; }
+				addChildAt(child: VisualComponent, index: number): VisualComponent { this._childContainer.insert(child, index); this.structureChange(); return child; }
+				childAt(idx: number): VisualComponent { return this._childContainer.elementAt(idx); }
+				numOfChildren(): number { return this._childContainer.size(); }
+				removeChild(child: VisualComponent): VisualComponent { let r = this._childContainer.remove(child); if (r) this.structureChange(); return child; }
+				removeChildAt(idx: number): VisualComponent { let r = this._childContainer.removeAt(idx); if (r != null) this.structureChange(); return r; }
+
+				moveToFront(child: VisualComponent): void {
+					if (this._childContainer.remove(child)) {
+						this._childContainer.pushFront(child);
+					}
+				}
+				moveToBack(child: VisualComponent): void {
+					if (this._childContainer.remove(child)) {
+						this._childContainer.pushBack(child);
+					}
+				}
+
+				getLayout(): ui.layout.ILayout { return this._layout; }
+				setLayout(layout: ui.layout.ILayout): void {
+					if (layout == null) { throw new ArgumentError("layout is null"); }
+					if (this._layout != layout) {
+						this._layout = layout;
+						this._layout.setTarget(this);
+						this.structureChange();
+					}
+				}
+
+				//it's real children's bound size
+				getContentWidth(): number {
+					return 0;//TODO
+				}
+
+				getContentHeight(): number {
+					return 0;//TODO
+				}
+
+				/* overrides */
+				setHeight(h: number): void {
+					if (this.getHeight() != h) this._updateLayout = true;
+					super.setHeight(h);
+					this.boundChanged();
+				}
+				setWidth(w: number): void {
+					if (this.getWidth() != w) this._updateLayout = true;
+					super.setWidth(w);
+					this.boundChanged();
+				}
+
+				setActualSize(w: number, h: number): void {
+					if (w != this.getWidth() || h != this.getHeight()) {
+						this._updateLayout = true;
+					}
+					super.setActualSize(w, h);
+					this.boundChanged();
+				}
+
+
+				/* private methods */
+				private boundChanged(): void {
+					//TODO
+				}
+
+				private structureChange(): void {
+					//TODO
+				}
+			}
+
+
 
 			export class StyleComponent extends UIComponent {
 
 			}
 
-			export class BaseStage implements IStage {
+
+
+
+
+
+			export class Page extends Container implements IPage {
+				protected navigator: IPageNavigator = null;
+
 				constructor() {
+					super();
 					this.initializeUI();
 				}
 
-				draw(g: Graphics): void { }
+
 				initializeUI(): void { }
+
+				setNavigator(navi: IPageNavigator): void {
+					this.navigator = navi;
+				}
+
+				navigated(arg: any): void { }
 			}
+
 		}
 
 	}
-	
+
 
 
 
@@ -434,6 +991,12 @@
 
 
 
+	//
+	/* InvalidationManager */
+	//
+	class InvalidationManager {
+
+	}
 
 
 	//
@@ -455,9 +1018,7 @@
 		getLoopInterval(): number;
 		setAnimating(animate: boolean): void;
 		getAnimating(): boolean;
-		setContent(content: core.IVisualComponent): void;
-		getContent(): core.IVisualComponent;
-
+		setInitialPage(typeOfStage: any): void;
 	}
 
 	export interface ApplicationIntializedCallback {
@@ -471,6 +1032,7 @@
 		private _graphics: Graphics;
 		private _taskHandlers: TaskHanlder = new TaskHanlder();
 		private _loopEngine: LoopEngine = new LoopEngine();
+		private _appid: string;
 
 		/* states */
 		private _drawReqeusted: boolean = false;
@@ -478,19 +1040,20 @@
 		private _step_timer: ManualTimer = new ManualTimer();
 
 		/* contents*/
-		private _content: core.IVisualComponent = null;
+		private _navigator: ui.core.IPageNavigator = new PageNavigator();
 
 
 		//
 		/* no interface member */
 		//
+		setAppId(appid: string) { this._appid = appid;}
 		setCanvasId(id: string): void { this._canvasId = id; }
 		initialize(appcb: ApplicationIntializedCallback): void {
 			if (this._canvasId == null) { appcb(new AppError(AppErrorType.NullCanvasId), null); return; }
 			this._initialized = true;
 
 			// init
-			this._loopEngine.setCallback(this.oninternalloop.bind(this));
+			this._loopEngine.setCallback(this.internalLoop.bind(this));
 
 			let init = () => {
 				let canvas = document.getElementById(this._canvasId) as HTMLCanvasElement;
@@ -523,7 +1086,7 @@
 			else document.addEventListener('DOMContentLoaded', init);
 		}
 
-		private oninternalloop(loop: ILoopEngine) {
+		private internalLoop(loop: ILoopEngine) {
 			// process tasks
 			this._taskHandlers.processTasks();
 
@@ -534,12 +1097,13 @@
 
 
 				// draw content
-				if (this._content) {
+				let p = this._navigator.topPage();
+				if (p != null) {
 					this._graphics.boundRect.x = this._graphics.boundRect.y = 0;
 					this._graphics.boundRect.width = this._graphics.context.canvas.width;
 					this._graphics.boundRect.height = this._graphics.context.canvas.height;
 
-					this._content.draw(this._graphics);
+					p.renderingRequest(this._graphics);
 				}
 
 				//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -581,7 +1145,6 @@
 
 		setSize(width: number, height: number): void {
 			//let c = this._content; // may be PageNavigator
-			console.log("" + width + "," + height);
 			this._taskHandlers.pushTask(() => {
 				this._graphics.context.canvas.width = width;
 				this._graphics.context.canvas.height = height;
@@ -590,18 +1153,55 @@
 			this._drawReqeusted = true;
 		}
 
-		setContent(content: core.IVisualComponent): void {
-			this._content = content;
-		}
-
-		getContent(): core.IVisualComponent {
-			return this._content;
+		setInitialPage(typeOfPage: any): void {
+			this._navigator.initialPage(typeOfPage);
 		}
 	}
 
 
 
+	class PageNavigator implements ui.core.IPageNavigator {
+		private _initialPage: ui.core.IPage = null;
+		private _pageStack: IStack<ui.core.IPage> = new Stack<ui.core.IPage>();
 
+		initialPage(pageType: any): void {
+			let newPage = new pageType();
+			if (!(newPage instanceof ui.core.Page)) throw new ArgumentError("argument is not instance of Page");
+			this._initialPage = newPage as ui.core.IPage;
+		}
+
+		navigate(pageType: any, argument: any): void {
+			let newPage = new pageType();
+			if (!(newPage instanceof ui.core.Page)) throw new ArgumentError("argument is not instance of Page");
+
+			newPage.setNavigator(this);
+			this._pageStack.push(newPage as ui.core.IPage);
+			this._pageStack.peek().navigated(argument);
+		}
+
+		hasPage(): boolean { return this._pageStack.size() != 0; }
+		hasInitialPage(): boolean { return this._initialPage != null; }
+		canGoBack(): boolean {
+			if (this._pageStack.size() > 1) return true;
+			if (this._pageStack.size() == 1 && this._initialPage != null) {
+				return true;
+			}
+			return false;
+		}
+		goBack(): void {
+			let s = this._pageStack.size();
+			if (s > 1 || (s == 1 && this._initialPage != null)) {
+				this._pageStack.pop();
+			}
+		}
+
+		pageCount(): number { return this._pageStack.size(); }
+		topPage(): ui.core.IPage {
+			if (this._pageStack.size() == 0)
+				return this._initialPage;
+			return this._pageStack.peek();
+		}
+	}
 
 
 	export class Application {
@@ -623,6 +1223,7 @@
 
 			app.setCanvasId(canvasId);
 			app.initialize(appcb);
+			app.setAppId(appid);
 
 			return appid;
 		}

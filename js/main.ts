@@ -1,13 +1,4 @@
-﻿namespace Test {
-	export class Testpage implements $avna.core.UIComponent{
-		draw(g: $avna.Graphics): void {
-			let ctx = g.context;
-			let rect = g.boundRect;
-			ctx.fillStyle = "#000000";
-			ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-		}
-	}
-}
+﻿
 
 (() => {
 	$avna.Application.Initialize("myCanvas",
@@ -26,8 +17,7 @@
 				// app settings
 				app.setAnimating(true); // redraw per every frame
 				app.setLoopInterval(20); //20ms
-				app.setContent(new Test.Testpage());
-				
+				app.setInitialPage(TestApp.MainPage); // set Initial Stage
 				app.start();
 			}
 		});

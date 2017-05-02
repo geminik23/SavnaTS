@@ -26,6 +26,173 @@ var $avna;
         return AppError;
     }());
     $avna.AppError = AppError;
+    var Stack = (function () {
+        function Stack() {
+            this._data = new Array();
+        }
+        Stack.prototype.hasElement = function () {
+            return this._data.length != 0;
+        };
+        Stack.prototype.size = function () { return this._data.length; };
+        Stack.prototype.pop = function () {
+            if (!this.hasElement())
+                return null;
+            var t = this._data[this._data.length - 1];
+            this._data = this._data.slice(0, this._data.length - 1);
+            return t;
+        };
+        Stack.prototype.push = function (element) {
+            this._data.push(element);
+        };
+        Stack.prototype.peek = function () {
+            if (!this.hasElement())
+                return null;
+            return this._data[this._data.length - 1];
+        };
+        return Stack;
+    }());
+    var LinkedList = (function () {
+        function LinkedList() {
+            this._beginNode = null;
+            this._endNode = null;
+            this._length = 0;
+        }
+        LinkedList.prototype.begin = function () { return this._beginNode; };
+        LinkedList.prototype.end = function () { return this._endNode; };
+        LinkedList.prototype.clear = function () {
+            this._beginNode = null;
+            this._endNode = null;
+            this._length = 0;
+        };
+        LinkedList.prototype.pushBack = function (ele) {
+            var node = { element: ele, next: null };
+            if (this._length == 0) {
+                this._beginNode = node;
+                this._endNode = node;
+            }
+            else {
+                this._endNode.next = node;
+                this._endNode = node;
+            }
+            this._length++;
+        };
+        LinkedList.prototype.pushFront = function (ele) {
+            var node = { element: ele, next: null };
+            if (this._length == 0) {
+                this._beginNode = node;
+                this._endNode = node;
+            }
+            else {
+                node.next = this._beginNode;
+                this._beginNode = node;
+            }
+            this._length++;
+        };
+        LinkedList.prototype.popFront = function () {
+            var result = null;
+            if (this._length == 0)
+                return result;
+            result = this._beginNode.element;
+            this._beginNode = this._beginNode.next;
+            this._length--;
+            return result;
+        };
+        LinkedList.prototype.popBack = function () {
+            var result = null;
+            if (this._length == 0)
+                return result;
+            if (this._length == 1) {
+                result = this._beginNode.element;
+                this.clear();
+                return result;
+            }
+            var t = this.nodeAt(this._length - 2);
+            result = t.next.element;
+            this._endNode = t;
+            t.next = null;
+            this._length--;
+            return result;
+        };
+        LinkedList.prototype.insert = function (ele, index) {
+            var node = { element: ele, next: null };
+            if (index == 0) {
+                node.next = this._beginNode.next;
+                this._beginNode = node;
+                this._length++;
+                return true;
+            }
+            if (index == this._length) {
+                this.pushBack(ele);
+                return true;
+            }
+            var pnode = this.nodeAt(index - 1);
+            if (pnode == null)
+                return false;
+            node.next = pnode.next;
+            pnode.next = node;
+            this._length++;
+            return true;
+        };
+        LinkedList.prototype.nodeAt = function (index) {
+            if (index < 0 || index >= this._length)
+                return null;
+            if (index == this._length - 1)
+                return this._endNode;
+            var cur = this._beginNode;
+            for (var i = 0; i < index; i++) {
+                cur = cur.next;
+            }
+            return cur;
+        };
+        LinkedList.prototype.indexOf = function (ele) {
+            var cur = this._beginNode;
+            var idx = 0;
+            while (cur != null) {
+                if (cur.element === ele)
+                    return idx;
+                idx++;
+                cur = cur.next;
+            }
+            return -1;
+        };
+        LinkedList.prototype.contains = function (element) {
+            return this.indexOf(element) != -1;
+        };
+        LinkedList.prototype.remove = function (element) {
+            var idx = this.indexOf(element);
+            if (idx == -1)
+                return false;
+            this.removeAt(idx);
+            return true;
+        };
+        LinkedList.prototype.removeAt = function (index) {
+            if (index < 0 || index >= this._length)
+                return null;
+            if (index == this._length - 1)
+                return this.popBack();
+            if (index == 0)
+                return this.popFront();
+            var t = this.nodeAt(index - 1);
+            var ele = t.element;
+            t.next = t.next.next;
+            this._length--;
+            return ele;
+        };
+        LinkedList.prototype.elementAt = function (index) {
+            var n = this.nodeAt(index);
+            return (n == null) ? null : n.element;
+        };
+        LinkedList.prototype.size = function () { return this._length; };
+        LinkedList.prototype.foreach = function (each) {
+            var cur = this._beginNode;
+            while (cur) {
+                each(cur.element);
+                cur = cur.next;
+            }
+        };
+        return LinkedList;
+    }());
+    $avna.LinkedList = LinkedList;
     // Unique Id generator
     var UniqueId = (function () {
         function UniqueId() {
@@ -238,9 +405,6 @@ var $avna;
         return TaskHanlder;
     }());
     $avna.TaskHanlder = TaskHanlder;
-    //
-    /* */
-    //
     var Point = (function () {
         function Point(x, y) {
             if (x === void 0) { x = 0; }
@@ -252,17 +416,10 @@ var $avna;
         return Point;
     }());
     $avna.Point = Point;
-    var Size = (function () {
-        function Size(width, height) {
-            if (width === void 0) { width = 0; }
-            if (height === void 0) { height = 0; }
-            this.width = width;
-            this.height = height;
-        }
-        Size.prototype.clone = function () { return new Size(this.width, this.height); };
-        return Size;
-    }());
-    $avna.Size = Size;
+    //export class Size implements IClonable<Size>{
+    //	constructor(public width: number = 0, public height: number = 0) { }
+    //	clone() { return new Size(this.width, this.height); }
+    //}
     var Rect = (function () {
         function Rect(x, y, width, height) {
             if (x === void 0) { x = 0; }
@@ -329,44 +486,321 @@ var $avna;
         return Graphics;
     }());
     $avna.Graphics = Graphics;
+    var BaseError = (function () {
+        function BaseError(msg) {
+            this._errorMsg = msg;
+        }
+        BaseError.prototype.getErrorMessage = function () { return this._errorMsg; };
+        return BaseError;
+    }());
+    $avna.BaseError = BaseError;
+    var ArgumentError = (function (_super) {
+        __extends(ArgumentError, _super);
+        function ArgumentError() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return ArgumentError;
+    }(BaseError));
+    $avna.ArgumentError = ArgumentError;
     //
-    /* Core UIs */
+    /* UserInterface */
     //
-    var core;
-    (function (core) {
-        var VisualComponent = (function () {
-            function VisualComponent() {
-            }
-            VisualComponent.prototype.draw = function (g) { };
-            return VisualComponent;
-        }());
-        core.VisualComponent = VisualComponent;
-        var UIComponent = (function (_super) {
-            __extends(UIComponent, _super);
-            function UIComponent() {
-                return _super !== null && _super.apply(this, arguments) || this;
-            }
-            return UIComponent;
-        }(VisualComponent));
-        core.UIComponent = UIComponent;
-        var StyleComponent = (function (_super) {
-            __extends(StyleComponent, _super);
-            function StyleComponent() {
-                return _super !== null && _super.apply(this, arguments) || this;
-            }
-            return StyleComponent;
-        }(UIComponent));
-        core.StyleComponent = StyleComponent;
-        var BaseStage = (function () {
-            function BaseStage() {
-                this.initializeUI();
-            }
-            BaseStage.prototype.draw = function (g) { };
-            BaseStage.prototype.initializeUI = function () { };
-            return BaseStage;
-        }());
-        core.BaseStage = BaseStage;
-    })(core = $avna.core || ($avna.core = {}));
+    var ui;
+    (function (ui) {
+        var core;
+        (function (core) {
+            var InvalidateType;
+            (function (InvalidateType) {
+                InvalidateType[InvalidateType["All"] = 0] = "All";
+                InvalidateType[InvalidateType["Size"] = 1] = "Size";
+                InvalidateType[InvalidateType["Position"] = 2] = "Position";
+                InvalidateType[InvalidateType["State"] = 3] = "State";
+            })(InvalidateType || (InvalidateType = {}));
+            var VisualComponent = (function (_super) {
+                __extends(VisualComponent, _super);
+                function VisualComponent() {
+                    var _this = _super !== null && _super.apply(this, arguments) || this;
+                    _this.appId = null;
+                    return _this;
+                }
+                Object.defineProperty(VisualComponent.prototype, "x", {
+                    get: function () { return this._x; },
+                    set: function (nx) { this._x = nx; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(VisualComponent.prototype, "y", {
+                    get: function () { return this._y; },
+                    set: function (ny) { this._y = ny; },
+                    enumerable: true,
+                    configurable: true
+                });
+                VisualComponent.prototype.measureRequest = function (availableSize) {
+                    var s = this.measureOverride(availableSize);
+                    if (s != null)
+                        return s;
+                    return this.internalMeasure(availableSize);
+                };
+                VisualComponent.prototype.measureOverride = function (available) { return null; };
+                VisualComponent.prototype.internalMeasure = function (available) { return available; };
+                VisualComponent.prototype.renderingRequest = function (g) {
+                    if (this.drawOverride(g))
+                        return;
+                    this.internalDraw(g);
+                };
+                VisualComponent.prototype.internalDraw = function (g) { };
+                VisualComponent.prototype.drawOverride = function (g) { return false; };
+                return VisualComponent;
+            }(EventEmitter));
+            core.VisualComponent = VisualComponent;
+            var UIComponent = (function (_super) {
+                __extends(UIComponent, _super);
+                function UIComponent() {
+                    var _this = _super.call(this) || this;
+                    _this._minWidth = 0;
+                    _this._minHeight = 0;
+                    _this._includeInLayout = true;
+                    _this.displayListIsInvalid = false;
+                    _this.propertiesAreInvalid = false;
+                    _this.init();
+                    return _this;
+                }
+                UIComponent.prototype.init = function () {
+                };
+                Object.defineProperty(UIComponent.prototype, "minWidth", {
+                    get: function () { return this._minWidth; },
+                    set: function (width) {
+                        if (this._minWidth != width) {
+                            this._minWidth = width;
+                            this.notifyLayoutChangedToParents();
+                        }
+                        return;
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "minHeight", {
+                    get: function () { return this._minHeight; },
+                    set: function (height) {
+                        if (this._minHeight != height) {
+                            this._minHeight = height;
+                            this.notifyLayoutChangedToParents();
+                        }
+                        return;
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "enabled", {
+                    get: function () {
+                        return this._enabled;
+                    },
+                    set: function (enable) {
+                        if (enable == this._enabled) {
+                            return;
+                        }
+                        this._enabled = enable;
+                        this.stateChanged = true;
+                        //invalidate
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                UIComponent.prototype.setPosition = function (x, y) {
+                    this.x = x;
+                    this.y = y;
+                    return;
+                };
+                UIComponent.prototype.setActualSize = function (width, height) {
+                    if (this._width != width) {
+                        this._width = height;
+                        this.sizeChange = true;
+                    }
+                    if (this._height != height) {
+                        this._height = height;
+                        this.sizeChange = true;
+                    }
+                    if (this.sizeChange) {
+                    }
+                };
+                UIComponent.prototype.childChanged = function (child) {
+                    if (child === void 0) { child = null; }
+                    return true;
+                };
+                UIComponent.prototype.notifyLayoutChangedToParents = function () {
+                    if (!this.parent)
+                        return;
+                    var cur = this;
+                    var p = null;
+                    while (cur) {
+                        p = cur.parent;
+                        if (p && !p.childChanged(cur))
+                            break;
+                        cur = p;
+                    }
+                };
+                UIComponent.prototype.notifyToParentLayoutChanged = function () {
+                    if (!this.parent)
+                        return;
+                    var p = this.parent;
+                    if (p && p.childChanged(null))
+                        p.notifyLayoutChangedToParents();
+                };
+                UIComponent.prototype.flushCache = function () { return; };
+                UIComponent.prototype.getWidth = function () { return this._width; };
+                UIComponent.prototype.setWidth = function (w) {
+                    if (this._explicitWidth != w) {
+                        this._explicitWidth = w;
+                    }
+                    if (this._width != w) {
+                        this._width = w;
+                        this.sizeChange = true;
+                    }
+                };
+                UIComponent.prototype.getHeight = function () { return this._height; };
+                UIComponent.prototype.setHeight = function (h) {
+                    if (this._explicitHeight != h) {
+                        this._explicitHeight = h;
+                    }
+                    if (this._height != h) {
+                        this._height = h;
+                        this.sizeChange = true;
+                    }
+                };
+                Object.defineProperty(UIComponent.prototype, "explicitWidth", {
+                    get: function () { return this._explicitWidth; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "explicitHeight", {
+                    get: function () { return this._explicitHeight; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "scaleX", {
+                    get: function () { return this._width / this.startWidth; },
+                    set: function (sx) { this._width = this.startWidth * sx; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "scaleY", {
+                    get: function () { return this._height / this.startHeight; },
+                    set: function (sy) { this._height = this.startHeight * sy; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(UIComponent.prototype, "includeInLayout", {
+                    get: function () { return this._includeInLayout; },
+                    set: function (i) {
+                        if (i != this._includeInLayout) {
+                            this._includeInLayout = i;
+                        }
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                return UIComponent;
+            }(VisualComponent));
+            core.UIComponent = UIComponent;
+            var Container = (function (_super) {
+                __extends(Container, _super);
+                function Container() {
+                    var _this = _super !== null && _super.apply(this, arguments) || this;
+                    _this._childContainer = new LinkedList();
+                    return _this;
+                }
+                Container.prototype.addChild = function (child) { this._childContainer.pushBack(child); this.structureChange(); return child; };
+                Container.prototype.addChildAt = function (child, index) { this._childContainer.insert(child, index); this.structureChange(); return child; };
+                Container.prototype.childAt = function (idx) { return this._childContainer.elementAt(idx); };
+                Container.prototype.numOfChildren = function () { return this._childContainer.size(); };
+                Container.prototype.removeChild = function (child) { var r = this._childContainer.remove(child); if (r)
+                    this.structureChange(); return child; };
+                Container.prototype.removeChildAt = function (idx) { var r = this._childContainer.removeAt(idx); if (r != null)
+                    this.structureChange(); return r; };
+                Container.prototype.moveToFront = function (child) {
+                    if (this._childContainer.remove(child)) {
+                        this._childContainer.pushFront(child);
+                    }
+                };
+                Container.prototype.moveToBack = function (child) {
+                    if (this._childContainer.remove(child)) {
+                        this._childContainer.pushBack(child);
+                    }
+                };
+                Container.prototype.getLayout = function () { return this._layout; };
+                Container.prototype.setLayout = function (layout) {
+                    if (layout == null) {
+                        throw new ArgumentError("layout is null");
+                    }
+                    if (this._layout != layout) {
+                        this._layout = layout;
+                        this._layout.setTarget(this);
+                        this.structureChange();
+                    }
+                };
+                //it's real children's bound size
+                Container.prototype.getContentWidth = function () {
+                    return 0; //TODO
+                };
+                Container.prototype.getContentHeight = function () {
+                    return 0; //TODO
+                };
+                /* overrides */
+                Container.prototype.setHeight = function (h) {
+                    if (this.getHeight() != h)
+                        this._updateLayout = true;
+                    _super.prototype.setHeight.call(this, h);
+                    this.boundChanged();
+                };
+                Container.prototype.setWidth = function (w) {
+                    if (this.getWidth() != w)
+                        this._updateLayout = true;
+                    _super.prototype.setWidth.call(this, w);
+                    this.boundChanged();
+                };
+                Container.prototype.setActualSize = function (w, h) {
+                    if (w != this.getWidth() || h != this.getHeight()) {
+                        this._updateLayout = true;
+                    }
+                    _super.prototype.setActualSize.call(this, w, h);
+                    this.boundChanged();
+                };
+                /* private methods */
+                Container.prototype.boundChanged = function () {
+                    //TODO
+                };
+                Container.prototype.structureChange = function () {
+                    //TODO
+                };
+                return Container;
+            }(UIComponent));
+            core.Container = Container;
+            var StyleComponent = (function (_super) {
+                __extends(StyleComponent, _super);
+                function StyleComponent() {
+                    return _super !== null && _super.apply(this, arguments) || this;
+                }
+                return StyleComponent;
+            }(UIComponent));
+            core.StyleComponent = StyleComponent;
+            var Page = (function (_super) {
+                __extends(Page, _super);
+                function Page() {
+                    var _this = _super.call(this) || this;
+                    _this.navigator = null;
+                    _this.initializeUI();
+                    return _this;
+                }
+                Page.prototype.initializeUI = function () { };
+                Page.prototype.setNavigator = function (navi) {
+                    this.navigator = navi;
+                };
+                Page.prototype.navigated = function (arg) { };
+                return Page;
+            }(Container));
+            core.Page = Page;
+        })(core = ui.core || (ui.core = {}));
+    })(ui = $avna.ui || ($avna.ui = {}));
     //
     /* event classes */
     //
@@ -399,6 +833,14 @@ var $avna;
         return new UserMouseEventArg(type, x * canvas.width / br.width, y * canvas.height / br.height);
     }
     //
+    /* InvalidationManager */
+    //
+    var InvalidationManager = (function () {
+        function InvalidationManager() {
+        }
+        return InvalidationManager;
+    }());
+    //
     /* application */
     //
     var CanvasApp = (function () {
@@ -422,12 +864,13 @@ var $avna;
             _this._looping = false;
             _this._step_timer = new ManualTimer();
             /* contents*/
-            _this._content = null;
+            _this._navigator = new PageNavigator();
             return _this;
         }
         //
         /* no interface member */
         //
+        ImpleApplication.prototype.setAppId = function (appid) { this._appid = appid; };
         ImpleApplication.prototype.setCanvasId = function (id) { this._canvasId = id; };
         ImpleApplication.prototype.initialize = function (appcb) {
             var _this = this;
@@ -437,7 +880,7 @@ var $avna;
             }
             this._initialized = true;
             // init
-            this._loopEngine.setCallback(this.oninternalloop.bind(this));
+            this._loopEngine.setCallback(this.internalLoop.bind(this));
             var init = function () {
                 var canvas = document.getElementById(_this._canvasId);
                 if (canvas == null) {
@@ -469,7 +912,7 @@ var $avna;
             else
                 document.addEventListener('DOMContentLoaded', init);
         };
-        ImpleApplication.prototype.oninternalloop = function (loop) {
+        ImpleApplication.prototype.internalLoop = function (loop) {
             // process tasks
             this._taskHandlers.processTasks();
             // check redraw and draw
@@ -477,11 +920,12 @@ var $avna;
                 this._graphics.stepTime = this._step_timer.sinceLastLap();
                 this._step_timer.lap();
                 // draw content
-                if (this._content) {
+                var p = this._navigator.topPage();
+                if (p != null) {
                     this._graphics.boundRect.x = this._graphics.boundRect.y = 0;
                     this._graphics.boundRect.width = this._graphics.context.canvas.width;
                     this._graphics.boundRect.height = this._graphics.context.canvas.height;
-                    this._content.draw(this._graphics);
+                    p.renderingRequest(this._graphics);
                 }
                 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 this._drawReqeusted = false;
@@ -514,7 +958,6 @@ var $avna;
         ImpleApplication.prototype.setSize = function (width, height) {
             var _this = this;
             //let c = this._content; // may be PageNavigator
-            console.log("" + width + "," + height);
             this._taskHandlers.pushTask(function () {
                 _this._graphics.context.canvas.width = width;
                 _this._graphics.context.canvas.height = height;
@@ -522,14 +965,54 @@ var $avna;
             });
             this._drawReqeusted = true;
         };
-        ImpleApplication.prototype.setContent = function (content) {
-            this._content = content;
-        };
-        ImpleApplication.prototype.getContent = function () {
-            return this._content;
+        ImpleApplication.prototype.setInitialPage = function (typeOfPage) {
+            this._navigator.initialPage(typeOfPage);
         };
         return ImpleApplication;
     }(EventEmitter));
+    var PageNavigator = (function () {
+        function PageNavigator() {
+            this._initialPage = null;
+            this._pageStack = new Stack();
+        }
+        PageNavigator.prototype.initialPage = function (pageType) {
+            var newPage = new pageType();
+            if (!(newPage instanceof ui.core.Page))
+                throw new ArgumentError("argument is not instance of Page");
+            this._initialPage = newPage;
+        };
+        PageNavigator.prototype.navigate = function (pageType, argument) {
+            var newPage = new pageType();
+            if (!(newPage instanceof ui.core.Page))
+                throw new ArgumentError("argument is not instance of Page");
+            newPage.setNavigator(this);
+            this._pageStack.push(newPage);
+            this._pageStack.peek().navigated(argument);
+        };
+        PageNavigator.prototype.hasPage = function () { return this._pageStack.size() != 0; };
+        PageNavigator.prototype.hasInitialPage = function () { return this._initialPage != null; };
+        PageNavigator.prototype.canGoBack = function () {
+            if (this._pageStack.size() > 1)
+                return true;
+            if (this._pageStack.size() == 1 && this._initialPage != null) {
+                return true;
+            }
+            return false;
+        };
+        PageNavigator.prototype.goBack = function () {
+            var s = this._pageStack.size();
+            if (s > 1 || (s == 1 && this._initialPage != null)) {
+                this._pageStack.pop();
+            }
+        };
+        PageNavigator.prototype.pageCount = function () { return this._pageStack.size(); };
+        PageNavigator.prototype.topPage = function () {
+            if (this._pageStack.size() == 0)
+                return this._initialPage;
+            return this._pageStack.peek();
+        };
+        return PageNavigator;
+    }());
     var Application = (function () {
         function Application() {
         }
@@ -546,6 +1029,7 @@ var $avna;
             Application._apps[appid] = canvasApp;
             app.setCanvasId(canvasId);
             app.initialize(appcb);
+            app.setAppId(appid);
             return appid;
         };
         Application.GetAppId = function (canvasId) {
