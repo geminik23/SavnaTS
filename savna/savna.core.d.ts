@@ -55,6 +55,33 @@ declare namespace $avna {
         size(): number;
         foreach(each: IForEach<T>): void;
     }
+    interface IPriorityQueue<T> {
+        getMaxPriority(): number;
+        getMinPriority(): number;
+        push(element: T, priority: number): void;
+        popMaxPriorityItem(): T;
+        popMinPriorityItem(): T;
+        isEmpty(): boolean;
+        toArray(): Array<T>;
+        toString(): string;
+    }
+    class PriorityQueue<T> implements IPriorityQueue<T> {
+        private _queue;
+        private _maxPriority;
+        private _minPriority;
+        constructor();
+        getMaxPriority(): number;
+        getMinPriority(): number;
+        push(element: T, priority: number): void;
+        isEmpty(): boolean;
+        popMaxPriorityItem(): T;
+        popMinPriorityItem(): T;
+        private updateMaxPriority();
+        private updateMinPriority();
+        private refresh();
+        toArray(): Array<T>;
+        toString(): string;
+    }
     interface IManualTimer {
         reset(): void;
         lap(): number;
@@ -211,12 +238,17 @@ declare namespace $avna {
         }
         namespace core {
             interface IInvalidate {
+                invalidateState(): void;
+                invalidateLayout(): void;
+                validateState(): void;
+                validateLayout(): void;
             }
             interface IVisualComponent {
                 measureRequest(availableSize: Size): Size;
                 renderingRequest(g: Graphics): void;
             }
             class VisualComponent extends EventEmitter implements IVisualComponent {
+                static DepthLevel(obj: any): number;
                 private _x;
                 private _y;
                 protected scaleX: number;
@@ -224,8 +256,13 @@ declare namespace $avna {
                 protected stage: Page;
                 protected parent: VisualComponent;
                 protected appId: string;
+                private _depthLevel;
                 x: number;
                 y: number;
+                readonly depthLevel: number;
+                readonly currentAppId: string;
+                readonly currentApplication: IApplication;
+                setParent(parent: VisualComponent): void;
                 measureRequest(availableSize: Size): Size;
                 protected measureOverride(available: Size): Size;
                 protected internalMeasure(available: Size): Size;
@@ -250,6 +287,7 @@ declare namespace $avna {
             interface IPage extends IContainer {
                 initializeUI(): void;
                 setNavigator(navigator: IPageNavigator): void;
+                setAppId(appid: string): void;
                 navigated(arg: any): void;
             }
             interface IPageNavigator {
@@ -261,8 +299,9 @@ declare namespace $avna {
                 goBack(): void;
                 pageCount(): number;
                 topPage(): ui.core.IPage;
+                setAppId(appid: string): void;
             }
-            class UIComponent extends VisualComponent {
+            class UIComponent extends VisualComponent implements IInvalidate {
                 private _enabled;
                 private _width;
                 private _height;
@@ -279,6 +318,10 @@ declare namespace $avna {
                 protected sizeChange: Boolean;
                 constructor();
                 protected init(): void;
+                invalidateState(): void;
+                invalidateLayout(): void;
+                validateState(): void;
+                validateLayout(): void;
                 minWidth: number;
                 minHeight: number;
                 enabled: boolean;
@@ -302,6 +345,7 @@ declare namespace $avna {
                 private _childContainer;
                 private _layout;
                 private _updateLayout;
+                protected setAppId(appid: string): void;
                 addChild(child: VisualComponent): VisualComponent;
                 addChildAt(child: VisualComponent, index: number): VisualComponent;
                 childAt(idx: number): VisualComponent;
@@ -325,6 +369,7 @@ declare namespace $avna {
             class Page extends Container implements IPage {
                 protected navigator: IPageNavigator;
                 constructor();
+                setAppId(id: string): void;
                 initializeUI(): void;
                 setNavigator(navi: IPageNavigator): void;
                 navigated(arg: any): void;
@@ -350,6 +395,8 @@ declare namespace $avna {
         constructor(type: UserPointType, x: number, y: number, handle?: any);
         toString(): string;
     }
+    interface IInvalidationManager {
+    }
     interface IApplication extends IEventEmitter {
         start(): void;
         mouseHandler(arg: UserMouseEventArg): void;
@@ -361,6 +408,7 @@ declare namespace $avna {
         setAnimating(animate: boolean): void;
         getAnimating(): boolean;
         setInitialPage(typeOfStage: any): void;
+        invalidationManager(): IInvalidationManager;
     }
     interface ApplicationIntializedCallback {
         (err: AppError, app: IApplication): void;
@@ -370,5 +418,6 @@ declare namespace $avna {
         static Initialize(canvasId: string, appcb: ApplicationIntializedCallback): string;
         static GetAppId(canvasId: string): string;
         static GetApplication(appId: string): IApplication;
+        static GetInvalidationManager(appId: string): IInvalidationManager;
     }
 }

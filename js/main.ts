@@ -19,6 +19,7 @@
 				app.setLoopInterval(20); //20ms
 				app.setInitialPage(TestApp.MainPage); // set Initial Stage
 				app.start();
+				
 			}
 		});
 })();

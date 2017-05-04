@@ -1,11 +1,17 @@
 ﻿
--  game play page
--  add page navigator
--  base structure
--  VisualElement -> Main Content always canvas size
+-  IInvalidate and implement
+-  InvalidationManager Implement
+-  imple IInavlidate in UIComponent
 
+-  ILayout
 
 ==========================
+-  Application.invalidationManager() : IInvalidationManager
+-  IInvalidate add major methods
+-  appid added to VisualComponent
+-  PriorityQueue
+-  add page navigator
+-  base structure
 -  LoopEngine with IntervalChecker
 -  use loop with windowFrame
 -  ManualTimer for steptime and TestPage

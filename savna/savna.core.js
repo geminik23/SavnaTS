@@ -193,6 +193,132 @@ var $avna;
         return LinkedList;
     }());
     $avna.LinkedList = LinkedList;
+    // PriorityQueue
+    var PriorityItem = (function () {
+        function PriorityItem() {
+            this._items = new LinkedList();
+        }
+        Object.defineProperty(PriorityItem.prototype, "itemList", {
+            get: function () { return this._items; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(PriorityItem.prototype, "length", {
+            get: function () { return this._items.size(); },
+            enumerable: true,
+            configurable: true
+        });
+        PriorityItem.prototype.contains = function (item) {
+            return this._items.contains(item);
+        };
+        PriorityItem.prototype.removeItem = function (item) {
+            this._items.remove(item);
+        };
+        PriorityItem.prototype.addItem = function (item) {
+            this._items.pushBack(item);
+        };
+        return PriorityItem;
+    }());
+    //!!!! this priorityQueue method occur overhead if you use big | priority number |
+    var PriorityQueue = (function () {
+        function PriorityQueue() {
+            this._queue = {};
+            this._maxPriority = -1;
+            this._minPriority = 0;
+        }
+        PriorityQueue.prototype.getMaxPriority = function () { return this._maxPriority; };
+        PriorityQueue.prototype.getMinPriority = function () { return this._minPriority; };
+        PriorityQueue.prototype.push = function (element, priority) {
+            if (this._minPriority > this._maxPriority) {
+                this._minPriority = priority;
+                this._maxPriority = priority;
+            }
+            if (this._minPriority > priority)
+                this._minPriority = priority;
+            if (this._maxPriority < priority)
+                this._maxPriority = priority;
+            var items = this._queue[priority];
+            if (!items) {
+                items = new PriorityItem();
+                this._queue[priority] = items;
+            }
+            items.addItem(element);
+        };
+        PriorityQueue.prototype.isEmpty = function () { return this._minPriority > this._maxPriority; };
+        PriorityQueue.prototype.popMaxPriorityItem = function () {
+            var item = null;
+            if (this._minPriority <= this._maxPriority) {
+                var items = this.updateMaxPriority();
+                if (items)
+                    item = items.itemList.popFront();
+                this.updateMaxPriority();
+            }
+            this.refresh();
+            return item;
+        };
+        PriorityQueue.prototype.popMinPriorityItem = function () {
+            var item = null;
+            var items = null;
+            if (this._minPriority <= this._maxPriority) {
+                var items_1 = this.updateMinPriority();
+                if (items_1)
+                    item = items_1.itemList.popFront();
+                this.updateMinPriority();
+            }
+            this.refresh();
+            return item;
+        };
+        PriorityQueue.prototype.updateMaxPriority = function () {
+            var cur = this._queue[this._maxPriority];
+            while (!cur || cur.length == 0) {
+                this._maxPriority -= 1;
+                if (this._maxPriority < this._minPriority) {
+                    return null;
+                }
+                cur = this._queue[this._maxPriority];
+            }
+            return cur;
+        };
+        PriorityQueue.prototype.updateMinPriority = function () {
+            var cur = this._queue[this._minPriority];
+            while (!cur || cur.length == 0) {
+                this._minPriority += 1;
+                if (this._maxPriority < this._minPriority) {
+                    return null;
+                }
+                cur = this._queue[this._minPriority];
+            }
+            return cur;
+        };
+        PriorityQueue.prototype.refresh = function () {
+            if (this.isEmpty()) {
+                this._maxPriority = -1;
+                this._minPriority = 0;
+            }
+        };
+        PriorityQueue.prototype.toArray = function () {
+            var t = null;
+            var arr = [];
+            var max = this._maxPriority;
+            var cur;
+            while (max >= this._minPriority) {
+                if (this._queue[max]) {
+                    cur = this._queue[max].itemList.begin();
+                    while (cur) {
+                        arr.push(cur.element);
+                        cur = cur.next;
+                    }
+                }
+                max--;
+            }
+            return arr;
+        };
+        PriorityQueue.prototype.toString = function () {
+            return this.toArray().toString();
+        };
+        return PriorityQueue;
+    }());
+    $avna.PriorityQueue = PriorityQueue;
     // Unique Id generator
     var UniqueId = (function () {
         function UniqueId() {
@@ -521,8 +647,14 @@ var $avna;
                 function VisualComponent() {
                     var _this = _super !== null && _super.apply(this, arguments) || this;
                     _this.appId = null;
+                    _this._depthLevel = 0;
                     return _this;
                 }
+                VisualComponent.DepthLevel = function (obj) {
+                    if (obj instanceof VisualComponent)
+                        return obj.depthLevel;
+                    return -1;
+                };
                 Object.defineProperty(VisualComponent.prototype, "x", {
                     get: function () { return this._x; },
                     set: function (nx) { this._x = nx; },
@@ -535,6 +667,28 @@ var $avna;
                     enumerable: true,
                     configurable: true
                 });
+                Object.defineProperty(VisualComponent.prototype, "depthLevel", {
+                    get: function () { return this._depthLevel; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(VisualComponent.prototype, "currentAppId", {
+                    get: function () { return this.appId; },
+                    enumerable: true,
+                    configurable: true
+                });
+                Object.defineProperty(VisualComponent.prototype, "currentApplication", {
+                    get: function () { return Application.GetApplication(this.appId); },
+                    enumerable: true,
+                    configurable: true
+                });
+                VisualComponent.prototype.setParent = function (parent) {
+                    this.parent = parent;
+                    if (parent != null) {
+                        this._depthLevel = parent.depthLevel + 1;
+                        this.appId = parent.currentAppId;
+                    }
+                };
                 VisualComponent.prototype.measureRequest = function (availableSize) {
                     var s = this.measureOverride(availableSize);
                     if (s != null)
@@ -566,6 +720,19 @@ var $avna;
                     return _this;
                 }
                 UIComponent.prototype.init = function () {
+                };
+                /* ::interface:: IInvalidate*/
+                UIComponent.prototype.invalidateState = function () {
+                    //TODO
+                };
+                UIComponent.prototype.invalidateLayout = function () {
+                    //TODO
+                };
+                UIComponent.prototype.validateState = function () {
+                    //TODO
+                };
+                UIComponent.prototype.validateLayout = function () {
+                    //TODO
                 };
                 Object.defineProperty(UIComponent.prototype, "minWidth", {
                     get: function () { return this._minWidth; },
@@ -601,7 +768,7 @@ var $avna;
                         }
                         this._enabled = enable;
                         this.stateChanged = true;
-                        //invalidate
+                        this.invalidateState();
                     },
                     enumerable: true,
                     configurable: true
@@ -621,6 +788,8 @@ var $avna;
                         this.sizeChange = true;
                     }
                     if (this.sizeChange) {
+                        this.invalidateState();
+                        this.invalidateLayout();
                     }
                 };
                 UIComponent.prototype.childChanged = function (child) {
@@ -655,6 +824,7 @@ var $avna;
                     if (this._width != w) {
                         this._width = w;
                         this.sizeChange = true;
+                        this.invalidateLayout();
                     }
                 };
                 UIComponent.prototype.getHeight = function () { return this._height; };
@@ -665,6 +835,7 @@ var $avna;
                     if (this._height != h) {
                         this._height = h;
                         this.sizeChange = true;
+                        this.invalidateLayout();
                     }
                 };
                 Object.defineProperty(UIComponent.prototype, "explicitWidth", {
@@ -709,14 +880,33 @@ var $avna;
                     _this._childContainer = new LinkedList();
                     return _this;
                 }
-                Container.prototype.addChild = function (child) { this._childContainer.pushBack(child); this.structureChange(); return child; };
-                Container.prototype.addChildAt = function (child, index) { this._childContainer.insert(child, index); this.structureChange(); return child; };
+                Container.prototype.setAppId = function (appid) {
+                    var _this = this;
+                    this.appId = appid;
+                    this._childContainer.foreach(function (ele) {
+                        ele.setParent(_this);
+                    });
+                };
+                Container.prototype.addChild = function (child) { this._childContainer.pushBack(child); child.setParent(this); this.structureChange(); return child; };
+                Container.prototype.addChildAt = function (child, index) { this._childContainer.insert(child, index); child.setParent(this); this.structureChange(); return child; };
                 Container.prototype.childAt = function (idx) { return this._childContainer.elementAt(idx); };
                 Container.prototype.numOfChildren = function () { return this._childContainer.size(); };
-                Container.prototype.removeChild = function (child) { var r = this._childContainer.remove(child); if (r)
-                    this.structureChange(); return child; };
-                Container.prototype.removeChildAt = function (idx) { var r = this._childContainer.removeAt(idx); if (r != null)
-                    this.structureChange(); return r; };
+                Container.prototype.removeChild = function (child) {
+                    var r = this._childContainer.remove(child);
+                    if (r) {
+                        child.setParent(null);
+                        this.structureChange();
+                    }
+                    return child;
+                };
+                Container.prototype.removeChildAt = function (idx) {
+                    var r = this._childContainer.removeAt(idx);
+                    if (r != null) {
+                        r.setParent(null);
+                        this.structureChange();
+                    }
+                    return r;
+                };
                 Container.prototype.moveToFront = function (child) {
                     if (this._childContainer.remove(child)) {
                         this._childContainer.pushFront(child);
@@ -791,6 +981,9 @@ var $avna;
                     _this.initializeUI();
                     return _this;
                 }
+                Page.prototype.setAppId = function (id) {
+                    _super.prototype.setAppId.call(this, id);
+                };
                 Page.prototype.initializeUI = function () { };
                 Page.prototype.setNavigator = function (navi) {
                     this.navigator = navi;
@@ -832,9 +1025,6 @@ var $avna;
         var br = canvas.getBoundingClientRect();
         return new UserMouseEventArg(type, x * canvas.width / br.width, y * canvas.height / br.height);
     }
-    //
-    /* InvalidationManager */
-    //
     var InvalidationManager = (function () {
         function InvalidationManager() {
         }
@@ -859,6 +1049,7 @@ var $avna;
             _this._canvasId = null;
             _this._taskHandlers = new TaskHanlder();
             _this._loopEngine = new LoopEngine();
+            _this._invalidationManager = new InvalidationManager();
             /* states */
             _this._drawReqeusted = false;
             _this._looping = false;
@@ -870,7 +1061,7 @@ var $avna;
         //
         /* no interface member */
         //
-        ImpleApplication.prototype.setAppId = function (appid) { this._appid = appid; };
+        ImpleApplication.prototype.setAppId = function (appid) { this._appid = appid; this._navigator.setAppId(this._appid); };
         ImpleApplication.prototype.setCanvasId = function (id) { this._canvasId = id; };
         ImpleApplication.prototype.initialize = function (appcb) {
             var _this = this;
@@ -968,25 +1159,36 @@ var $avna;
         ImpleApplication.prototype.setInitialPage = function (typeOfPage) {
             this._navigator.initialPage(typeOfPage);
         };
+        ImpleApplication.prototype.invalidationManager = function () { return this._invalidationManager; };
         return ImpleApplication;
     }(EventEmitter));
     var PageNavigator = (function () {
         function PageNavigator() {
             this._initialPage = null;
             this._pageStack = new Stack();
+            this._appid = null;
         }
+        PageNavigator.prototype.setAppId = function (appid) {
+            this._appid = appid;
+        };
         PageNavigator.prototype.initialPage = function (pageType) {
             var newPage = new pageType();
             if (!(newPage instanceof ui.core.Page))
                 throw new ArgumentError("argument is not instance of Page");
+            var ipage = newPage;
             this._initialPage = newPage;
+            ipage.setNavigator(this);
+            ipage.setAppId(this._appid);
+            this._initialPage.navigated(null);
         };
         PageNavigator.prototype.navigate = function (pageType, argument) {
             var newPage = new pageType();
             if (!(newPage instanceof ui.core.Page))
                 throw new ArgumentError("argument is not instance of Page");
-            newPage.setNavigator(this);
-            this._pageStack.push(newPage);
+            var ipage = newPage;
+            ipage.setNavigator(this);
+            ipage.setAppId(this._appid);
+            this._pageStack.push(ipage);
             this._pageStack.peek().navigated(argument);
         };
         PageNavigator.prototype.hasPage = function () { return this._pageStack.size() != 0; };
@@ -1028,8 +1230,8 @@ var $avna;
             appid = "appid" + UniqueId.GetId();
             Application._apps[appid] = canvasApp;
             app.setCanvasId(canvasId);
-            app.initialize(appcb);
             app.setAppId(appid);
+            app.initialize(appcb);
             return appid;
         };
         Application.GetAppId = function (canvasId) {
@@ -1040,7 +1242,15 @@ var $avna;
             return null;
         };
         Application.GetApplication = function (appId) {
+            if (appId == null)
+                return null;
             return Application._apps[appId].application;
+        };
+        Application.GetInvalidationManager = function (appId) {
+            var app = Application.GetApplication(appId);
+            if (app)
+                return app.invalidationManager();
+            return null;
         };
         return Application;
     }());

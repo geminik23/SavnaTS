@@ -229,6 +229,163 @@
 		}
 	}
 
+	// PriorityQueue
+	class PriorityItem<T> {
+		private _items: LinkedList<T> = new LinkedList<T>();
+
+		get itemList(): LinkedList<T> { return this._items; }
+		get length(): number { return this._items.size(); }
+
+		private contains(item: T): boolean {
+			return this._items.contains(item);
+		}
+
+		removeItem(item: T) {
+			this._items.remove(item);
+		}
+
+		addItem(item: T) {
+			this._items.pushBack(item);
+		}
+	}
+
+	type NumberKeyMap<T> = { [key: number]: T };
+	type PriorityQueueContainer<T> = NumberKeyMap<PriorityItem<T>>;
+
+
+	export interface IPriorityQueue<T> {
+		getMaxPriority(): number;
+		getMinPriority(): number;
+		push(element: T, priority: number): void;
+		popMaxPriorityItem(): T;
+		popMinPriorityItem(): T;
+		isEmpty(): boolean;
+		toArray(): Array<T>;
+		toString(): string;
+	}
+
+
+	//!!!! this priorityQueue method occur overhead if you use big | priority number |
+	export class PriorityQueue<T> implements IPriorityQueue<T>{
+		private _queue: PriorityQueueContainer<T>;
+		private _maxPriority: number;
+		private _minPriority: number;
+
+		constructor() {
+			this._queue = {};
+			this._maxPriority = -1;
+			this._minPriority = 0;
+		}
+
+		getMaxPriority(): number { return this._maxPriority; }
+		getMinPriority(): number { return this._minPriority; }
+
+		push(element: T, priority: number): void {
+			if (this._minPriority > this._maxPriority) {
+				this._minPriority = priority;
+				this._maxPriority = priority;
+			}
+			if (this._minPriority > priority)
+				this._minPriority = priority;
+			if (this._maxPriority < priority)
+				this._maxPriority = priority;
+			let items = this._queue[priority];
+			if (!items) {
+				items = new PriorityItem<T>();
+				this._queue[priority] = items;
+			}
+			items.addItem(element);
+		}
+
+		isEmpty(): boolean { return this._minPriority > this._maxPriority; }
+
+		popMaxPriorityItem(): T {
+			let item: T = null;
+			if (this._minPriority <= this._maxPriority) {
+				let items = this.updateMaxPriority();
+				if (items)
+					item = items.itemList.popFront();
+				this.updateMaxPriority();
+			}
+			this.refresh();
+			return item;
+		}
+
+		popMinPriorityItem(): T {
+			let item: T = null;
+			let items: PriorityItem<T> = null;
+			if (this._minPriority <= this._maxPriority) {
+				let items = this.updateMinPriority();
+				if (items)
+					item = items.itemList.popFront();
+				this.updateMinPriority();
+			}
+			this.refresh();
+			return item;
+		}
+
+		private updateMaxPriority(): PriorityItem<T> {
+			let cur = this._queue[this._maxPriority];
+
+			while (!cur || cur.length == 0) {
+				this._maxPriority -= 1;
+				if (this._maxPriority < this._minPriority) {
+					return null;
+				}
+				cur = this._queue[this._maxPriority];
+			}
+			return cur;
+		}
+
+		private updateMinPriority(): PriorityItem<T> {
+			let cur = this._queue[this._minPriority];
+
+			while (!cur || cur.length == 0) {
+				this._minPriority += 1;
+				if (this._maxPriority < this._minPriority) {
+					return null;
+				}
+				cur = this._queue[this._minPriority];
+			}
+			return cur;
+		}
+
+		private refresh() {
+			if (this.isEmpty()) {
+				this._maxPriority = -1;
+				this._minPriority = 0;
+			}
+		}
+
+
+		toArray(): Array<T> {
+			let t: T = null;
+			let arr: Array<T> = [];
+			let max = this._maxPriority;
+
+			let cur: LinkedListNode<T>;
+
+			while (max >= this._minPriority) {
+				if (this._queue[max]) {
+					cur = this._queue[max].itemList.begin();
+					while (cur) {
+						arr.push(cur.element);
+						cur = cur.next;
+					}
+				}
+				max--;
+			}
+			return arr;
+		}
+
+		toString(): string {
+			return this.toArray().toString();
+		}
+
+	}
+
+
+
 	// Unique Id generator
 	class UniqueId {
 		private static _id: number = 0;
@@ -236,7 +393,6 @@
 			return UniqueId._id++;
 		}
 	}
-
 
 	//Timer
 	export interface IManualTimer {
@@ -571,8 +727,7 @@
 
 
 
-
-
+	
 
 
 	//
@@ -615,7 +770,10 @@
 
 
 			export interface IInvalidate { // this is for InvalidationCenter //TODO
-
+				invalidateState(): void;
+				invalidateLayout(): void;
+				validateState(): void;
+				validateLayout(): void;
 			}
 
 			export interface IVisualComponent {
@@ -624,6 +782,11 @@
 			}
 
 			export class VisualComponent extends EventEmitter implements IVisualComponent {
+				static DepthLevel(obj: any): number {
+					if (obj instanceof VisualComponent) return (obj as VisualComponent).depthLevel;
+					return -1;
+				}
+
 				private _x: number;
 				private _y: number;
 				protected scaleX: number;
@@ -631,12 +794,26 @@
 				protected stage: Page;
 				protected parent: VisualComponent;
 				protected appId: string = null;
+				private _depthLevel: number = 0;
 
 				get x(): number { return this._x; }
 				set x(nx: number) { this._x = nx; }
 				get y(): number { return this._y; }
 				set y(ny: number) { this._y = ny; }
-				
+
+				get depthLevel(): number { return this._depthLevel; }
+				get currentAppId(): string { return this.appId; }
+				get currentApplication(): IApplication { return Application.GetApplication(this.appId); }
+
+				setParent(parent: VisualComponent): void {
+					this.parent = parent;
+					
+					if (parent != null) {
+						this._depthLevel = parent.depthLevel + 1;
+						this.appId = parent.currentAppId;
+					}
+				}
+
 
 				measureRequest(availableSize: Size): Size {
 					let s = this.measureOverride(availableSize);
@@ -675,6 +852,7 @@
 			export interface IPage extends IContainer {
 				initializeUI(): void;
 				setNavigator(navigator: IPageNavigator): void;
+				setAppId(appid: string): void;
 				navigated(arg: any): void;
 			}
 
@@ -687,12 +865,12 @@
 				goBack(): void;
 				pageCount(): number;
 				topPage(): ui.core.IPage;
-
+				setAppId(appid:string): void;
 			}
 
 
 
-			export class UIComponent extends VisualComponent {
+			export class UIComponent extends VisualComponent implements IInvalidate{
 				private _enabled: boolean;
 				private _width: number;
 				private _height: number;
@@ -716,6 +894,20 @@
 
 				protected init() {
 
+				}
+
+				/* ::interface:: IInvalidate*/
+				invalidateState(): void {
+					//TODO
+				}
+				invalidateLayout(): void {
+					//TODO
+				}
+				validateState(): void {
+					//TODO
+				}
+				validateLayout(): void {
+					//TODO
 				}
 
 				get minWidth(): number { return this._minWidth; }
@@ -746,7 +938,7 @@
 					}
 					this._enabled = enable;
 					this.stateChanged = true;
-						//invalidate
+					this.invalidateState();
 				}
 
 
@@ -766,7 +958,8 @@
 						this.sizeChange = true;
 					}
 					if (this.sizeChange) {
-						//invalidate
+						this.invalidateState();
+						this.invalidateLayout();
 					}
 				}
 
@@ -800,7 +993,7 @@
 					if (this._width != w) {
 						this._width = w;
 						this.sizeChange = true;
-						//this.invalidateDisplayList();
+						this.invalidateLayout();
 					}
 				}
 				getHeight(): number { return this._height; }
@@ -811,7 +1004,7 @@
 					if (this._height != h) {
 						this._height = h;
 						this.sizeChange = true;
-						//this.invalidateDisplayList();
+						this.invalidateLayout();
 					}
 				}
 
@@ -826,7 +1019,7 @@
 				set includeInLayout(i: boolean) {
 					if (i != this._includeInLayout) {
 						this._includeInLayout = i;
-						//this.parentStructuralChange();
+						// parentStructuralChange();
 					}
 				}
 			}
@@ -838,12 +1031,34 @@
 				private _layout: ui.layout.ILayout;
 				private _updateLayout: boolean;
 
-				addChild(child: VisualComponent): VisualComponent { this._childContainer.pushBack(child); this.structureChange(); return child; }
-				addChildAt(child: VisualComponent, index: number): VisualComponent { this._childContainer.insert(child, index); this.structureChange(); return child; }
+
+				protected setAppId(appid: string) {
+					this.appId = appid;
+					this._childContainer.foreach((ele: VisualComponent) => {
+						ele.setParent(this);
+					});
+				}
+
+				addChild(child: VisualComponent): VisualComponent { this._childContainer.pushBack(child); child.setParent(this); this.structureChange(); return child; }
+				addChildAt(child: VisualComponent, index: number): VisualComponent { this._childContainer.insert(child, index); child.setParent(this); this.structureChange(); return child; }
 				childAt(idx: number): VisualComponent { return this._childContainer.elementAt(idx); }
 				numOfChildren(): number { return this._childContainer.size(); }
-				removeChild(child: VisualComponent): VisualComponent { let r = this._childContainer.remove(child); if (r) this.structureChange(); return child; }
-				removeChildAt(idx: number): VisualComponent { let r = this._childContainer.removeAt(idx); if (r != null) this.structureChange(); return r; }
+				removeChild(child: VisualComponent): VisualComponent {
+					let r = this._childContainer.remove(child);
+					if (r) {
+						child.setParent(null);
+						this.structureChange();
+					}
+					return child;
+				}
+				removeChildAt(idx: number): VisualComponent {
+					let r = this._childContainer.removeAt(idx);
+					if (r != null) {
+						r.setParent(null);
+						this.structureChange();
+					}
+					return r;
+				}
 
 				moveToFront(child: VisualComponent): void {
 					if (this._childContainer.remove(child)) {
@@ -925,6 +1140,9 @@
 					this.initializeUI();
 				}
 
+				setAppId(id: string): void {
+					super.setAppId(id);
+				}
 
 				initializeUI(): void { }
 
@@ -991,10 +1209,25 @@
 
 
 
+
+
+	
+	
 	//
 	/* InvalidationManager */
 	//
+	export interface IInvalidationManager {
+
+	}
+
 	class InvalidationManager {
+		private _stateQueue: PriorityQueue<ui.core.VisualComponent>;
+		private _viewQueue: PriorityQueue<ui.core.VisualComponent>;
+		private _validating: boolean;
+		private _appid: string;
+
+		//TODO
+
 
 	}
 
@@ -1019,6 +1252,7 @@
 		setAnimating(animate: boolean): void;
 		getAnimating(): boolean;
 		setInitialPage(typeOfStage: any): void;
+		invalidationManager(): IInvalidationManager;
 	}
 
 	export interface ApplicationIntializedCallback {
@@ -1033,6 +1267,8 @@
 		private _taskHandlers: TaskHanlder = new TaskHanlder();
 		private _loopEngine: LoopEngine = new LoopEngine();
 		private _appid: string;
+		private _invalidationManager: IInvalidationManager = new InvalidationManager();
+
 
 		/* states */
 		private _drawReqeusted: boolean = false;
@@ -1046,7 +1282,7 @@
 		//
 		/* no interface member */
 		//
-		setAppId(appid: string) { this._appid = appid;}
+		setAppId(appid: string) { this._appid = appid; this._navigator.setAppId(this._appid); }
 		setCanvasId(id: string): void { this._canvasId = id; }
 		initialize(appcb: ApplicationIntializedCallback): void {
 			if (this._canvasId == null) { appcb(new AppError(AppErrorType.NullCanvasId), null); return; }
@@ -1156,6 +1392,9 @@
 		setInitialPage(typeOfPage: any): void {
 			this._navigator.initialPage(typeOfPage);
 		}
+
+
+		invalidationManager(): IInvalidationManager { return this._invalidationManager; }
 	}
 
 
@@ -1163,19 +1402,32 @@
 	class PageNavigator implements ui.core.IPageNavigator {
 		private _initialPage: ui.core.IPage = null;
 		private _pageStack: IStack<ui.core.IPage> = new Stack<ui.core.IPage>();
+		private _appid: string = null;
+
+
+		setAppId(appid: string): void {
+			this._appid = appid;
+		}
 
 		initialPage(pageType: any): void {
 			let newPage = new pageType();
 			if (!(newPage instanceof ui.core.Page)) throw new ArgumentError("argument is not instance of Page");
+			let ipage: ui.core.IPage = newPage as ui.core.IPage;
+
 			this._initialPage = newPage as ui.core.IPage;
+			ipage.setNavigator(this);
+			ipage.setAppId(this._appid);
+			this._initialPage.navigated(null);
 		}
 
 		navigate(pageType: any, argument: any): void {
 			let newPage = new pageType();
 			if (!(newPage instanceof ui.core.Page)) throw new ArgumentError("argument is not instance of Page");
+			let ipage: ui.core.IPage = newPage as ui.core.IPage;
 
-			newPage.setNavigator(this);
-			this._pageStack.push(newPage as ui.core.IPage);
+			ipage.setNavigator(this);
+			ipage.setAppId(this._appid);
+			this._pageStack.push(ipage);
 			this._pageStack.peek().navigated(argument);
 		}
 
@@ -1222,8 +1474,8 @@
 			Application._apps[appid] = canvasApp;
 
 			app.setCanvasId(canvasId);
-			app.initialize(appcb);
 			app.setAppId(appid);
+			app.initialize(appcb);
 
 			return appid;
 		}
@@ -1237,8 +1489,17 @@
 		}
 
 		static GetApplication(appId: string): IApplication {
+			if (appId == null) return null;
 			return Application._apps[appId].application;
 		}
+
+
+		static GetInvalidationManager(appId: string): IInvalidationManager {
+			let app = Application.GetApplication(appId);
+			if (app) return app.invalidationManager();
+			return null;
+		}
+
 	}
 
 }
