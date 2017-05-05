@@ -714,16 +714,17 @@ var $avna;
                     _this._minWidth = 0;
                     _this._minHeight = 0;
                     _this._includeInLayout = true;
-                    _this.displayListIsInvalid = false;
-                    _this.propertiesAreInvalid = false;
+                    _this.layoutInvalid = false;
+                    _this.stateInvalid = false;
                     _this.init();
                     return _this;
                 }
-                UIComponent.prototype.init = function () {
-                };
+                UIComponent.prototype.init = function () { };
                 /* ::interface:: IInvalidate*/
                 UIComponent.prototype.invalidateState = function () {
-                    //TODO
+                    if (!this.stateInvalid && this.parent != null) {
+                        this.stateInvalid = true;
+                    }
                 };
                 UIComponent.prototype.invalidateLayout = function () {
                     //TODO

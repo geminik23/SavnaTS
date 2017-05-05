@@ -1,11 +1,11 @@
 ﻿
--  IInvalidate and implement
 -  InvalidationManager Implement
 -  imple IInavlidate in UIComponent
 
 -  ILayout
 
 ==========================
+-  IInvalidate and implement
 -  Application.invalidationManager() : IInvalidationManager
 -  IInvalidate add major methods
 -  appid added to VisualComponent

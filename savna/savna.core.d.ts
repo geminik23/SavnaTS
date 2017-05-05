@@ -312,8 +312,8 @@ declare namespace $avna {
                 private _includeInLayout;
                 private _explicitWidth;
                 private _explicitHeight;
-                protected displayListIsInvalid: Boolean;
-                protected propertiesAreInvalid: Boolean;
+                protected layoutInvalid: Boolean;
+                protected stateInvalid: Boolean;
                 protected stateChanged: Boolean;
                 protected sizeChange: Boolean;
                 constructor();

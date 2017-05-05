@@ -885,30 +885,47 @@
 				private _explicitWidth: number;
 				private _explicitHeight: number;
 
-				protected displayListIsInvalid: Boolean = false;
-				protected propertiesAreInvalid: Boolean = false;
-				protected stateChanged: Boolean;
-				protected sizeChange: Boolean;
+				protected layoutInvalid: Boolean = false;
+				protected stateInvalid: Boolean = false;
+				protected sizeChanged: Boolean;
 
 				constructor() { super(); this.init(); }
 
-				protected init() {
+				protected init() {}
 
-				}
-
-				/* ::interface:: IInvalidate*/
+				/* BEGIN ::interface:: IInvalidate*/
 				invalidateState(): void {
-					//TODO
+					if (!this.stateInvalid && this.parent != null) {
+						this.stateInvalid = true;
+						this.currentApplication.invalidationManager().invalidState(this);
+					}
 				}
 				invalidateLayout(): void {
-					//TODO
+					if (!this.layoutInvalid && this.parent != null) {
+						this.layoutInvalid = true;
+						this.currentApplication.invalidationManager().invalidLayout(this);
+					}
 				}
 				validateState(): void {
-					//TODO
+					if (this.stateInvalid) {
+						this.commitState();
+						this.stateInvalid = false;
+					}
 				}
 				validateLayout(): void {
-					//TODO
+					if (this.layoutInvalid) {
+						this.updateLayout(this._width, this._height);
+						this.layoutInvalid = false;
+					}
 				}
+
+				protected commitState(): void {/* will implement in subclass */}
+
+				protected updateLayout(w: number, h: number): void {/* will implement in subclass */ }
+
+				/* END ::interface:: IInvalidate */
+
+				
 
 				get minWidth(): number { return this._minWidth; }
 				set minWidth(width: number) {
@@ -1217,10 +1234,11 @@
 	/* InvalidationManager */
 	//
 	export interface IInvalidationManager {
-
+		invalidLayout(ele:ui.core.IInvalidate): void;
+		invalidState(ele: ui.core.IInvalidate): void;
 	}
 
-	class InvalidationManager {
+	class InvalidationManager implements IInvalidationManager{
 		private _stateQueue: PriorityQueue<ui.core.VisualComponent>;
 		private _viewQueue: PriorityQueue<ui.core.VisualComponent>;
 		private _validating: boolean;
@@ -1228,6 +1246,12 @@
 
 		//TODO
 
+		invalidLayout(ele: ui.core.IInvalidate): void {
+
+		}
+		invalidState(ele: ui.core.IInvalidate): void {
+
+		}
 
 	}
 
