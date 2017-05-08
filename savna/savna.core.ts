@@ -781,7 +781,7 @@
 				renderingRequest(g: Graphics): void;
 			}
 
-			export class VisualComponent extends EventEmitter implements IVisualComponent {
+			export class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
 				static DepthLevel(obj: any): number {
 					if (obj instanceof VisualComponent) return (obj as VisualComponent).depthLevel;
 					return -1;
@@ -830,6 +830,11 @@
 				protected internalDraw(g: Graphics): void { }
 				protected drawOverride(g: Graphics): boolean { return false; }
 
+
+				invalidateState(): void{}
+				invalidateLayout(): void{}
+				validateState(): void{}
+				validateLayout(): void{}
 			}
 
 
@@ -870,7 +875,7 @@
 
 
 
-			export class UIComponent extends VisualComponent implements IInvalidate{
+			export class UIComponent extends VisualComponent{
 				private _enabled: boolean;
 				private _width: number;
 				private _height: number;
@@ -897,13 +902,13 @@
 				invalidateState(): void {
 					if (!this.stateInvalid && this.parent != null) {
 						this.stateInvalid = true;
-						this.currentApplication.invalidationManager().invalidState(this);
+						this.currentApplication.invalidationManager().invalidState(this, this.depthLevel);
 					}
 				}
 				invalidateLayout(): void {
 					if (!this.layoutInvalid && this.parent != null) {
 						this.layoutInvalid = true;
-						this.currentApplication.invalidationManager().invalidLayout(this);
+						this.currentApplication.invalidationManager().invalidLayout(this, this.depthLevel);
 					}
 				}
 				validateState(): void {
@@ -931,7 +936,7 @@
 				set minWidth(width: number) {
 					if (this._minWidth != width) {
 						this._minWidth = width;
-						this.notifyLayoutChangedToParents();
+						this.notifyLayoutInfoChangedToParents();
 					}
 					return;
 				}
@@ -940,7 +945,7 @@
 				set minHeight(height: number) {
 					if (this._minHeight != height) {
 						this._minHeight = height;
-						this.notifyLayoutChangedToParents();
+						this.notifyLayoutInfoChangedToParents();
 					}
 					return;
 				}
@@ -954,7 +959,7 @@
 						return;
 					}
 					this._enabled = enable;
-					this.stateChanged = true;
+					this.stateInvalid = true;
 					this.invalidateState();
 				}
 
@@ -968,13 +973,13 @@
 				setActualSize(width: number, height: number): void {
 					if (this._width != width) {
 						this._width = height;
-						this.sizeChange = true;
+						this.sizeChanged = true;
 					}
 					if (this._height != height) {
 						this._height = height;
-						this.sizeChange = true;
+						this.sizeChanged = true;
 					}
-					if (this.sizeChange) {
+					if (this.sizeChanged) {
 						this.invalidateState();
 						this.invalidateLayout();
 					}
@@ -983,7 +988,7 @@
 
 				childChanged(child: VisualComponent = null): boolean { return true; }
 
-				protected notifyLayoutChangedToParents(): void {
+				protected notifyLayoutInfoChangedToParents(): void {
 					if (!this.parent) return;
 					let cur: UIComponent = this;
 					let p: UIComponent = null;
@@ -994,11 +999,11 @@
 					}
 				}
 
-				protected notifyToParentLayoutChanged(): void {
-					if (!this.parent) return;
-					let p = this.parent as UIComponent;
-					if (p && p.childChanged(null)) p.notifyLayoutChangedToParents();
-				}
+				//protected notifyToParentLayoutChanged(): void {
+				//	if (!this.parent) return;
+				//	let p = this.parent as UIComponent;
+				//	if (p && p.childChanged(null)) p.notifyLayoutInfoChangedToParents();
+				//}
 
 				protected flushCache(): void { return; }
 
@@ -1009,7 +1014,7 @@
 					}
 					if (this._width != w) {
 						this._width = w;
-						this.sizeChange = true;
+						this.sizeChanged = true;
 						this.invalidateLayout();
 					}
 				}
@@ -1020,7 +1025,7 @@
 					}
 					if (this._height != h) {
 						this._height = h;
-						this.sizeChange = true;
+						this.sizeChanged = true;
 						this.invalidateLayout();
 					}
 				}
@@ -1234,8 +1239,12 @@
 	/* InvalidationManager */
 	//
 	export interface IInvalidationManager {
-		invalidLayout(ele:ui.core.IInvalidate): void;
-		invalidState(ele: ui.core.IInvalidate): void;
+		doFrame(): boolean;
+
+		invalidLayout(ele:ui.core.IInvalidate, priority:number): void;
+		invalidState(ele: ui.core.IInvalidate, priority: number): void;
+		validateLayout(): void;
+		validateState(): void;
 	}
 
 	class InvalidationManager implements IInvalidationManager{
@@ -1244,13 +1253,42 @@
 		private _validating: boolean;
 		private _appid: string;
 
-		//TODO
 
-		invalidLayout(ele: ui.core.IInvalidate): void {
-
+		doFrame(): boolean {
+			return this.doValidation();
 		}
-		invalidState(ele: ui.core.IInvalidate): void {
 
+		private doValidation() :boolean{
+			this._validating = true;
+			let validated = !this._stateQueue.isEmpty() || !this._viewQueue.isEmpty();
+			if (validated) {
+				this.validateState();
+				this.validateLayout();		
+			}
+
+			this._validating = false;
+			return validated;
+		}
+
+		invalidLayout(ele: ui.core.IInvalidate, priority: number): void {
+			this._viewQueue.push(ele as ui.core.UIComponent, priority);
+		}
+		invalidState(ele: ui.core.IInvalidate, priority: number): void {
+			this._stateQueue.push(ele as ui.core.UIComponent, priority);
+		}
+
+		validateLayout(): void {
+			let item: ui.core.VisualComponent = null;
+			while ((item = this._viewQueue.popMaxPriorityItem()) != null) {
+				item.validateLayout();
+			}
+		}
+
+		validateState(): void {
+			let item: ui.core.VisualComponent = null;
+			while ((item = this._viewQueue.popMaxPriorityItem()) != null) {
+				item.validateState();
+			}
 		}
 
 	}
@@ -1268,7 +1306,6 @@
 	export interface IApplication extends IEventEmitter {
 		start(): void;
 		mouseHandler(arg: UserMouseEventArg): void;
-		requestRedraw(): void;
 		isInitialized(): boolean;
 		setSize(width: number, height: number): void;
 		setLoopInterval(interval: number): void;
@@ -1295,7 +1332,6 @@
 
 
 		/* states */
-		private _drawReqeusted: boolean = false;
 		private _looping: boolean = false;
 		private _step_timer: ManualTimer = new ManualTimer();
 
@@ -1351,7 +1387,7 @@
 			this._taskHandlers.processTasks();
 
 			// check redraw and draw
-			if (this._looping || this._drawReqeusted) {
+			if (this._looping || this._invalidationManager.doFrame()) {
 				this._graphics.stepTime = this._step_timer.sinceLastLap();
 				this._step_timer.lap();
 
@@ -1365,9 +1401,6 @@
 
 					p.renderingRequest(this._graphics);
 				}
-
-				//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-				this._drawReqeusted = false;
 			}
 		}
 
@@ -1385,10 +1418,6 @@
 		mouseHandler(arg: UserMouseEventArg): void {
 			//TODO
 			//console.log(arg.toString());
-		}
-
-		requestRedraw(): void {
-			this._drawReqeusted = true;
 		}
 
 		setAnimating(animate: boolean): void { this._looping = animate; }
@@ -1410,7 +1439,7 @@
 				this._graphics.context.canvas.height = height;
 				//TODO layout ???may be PageNavigator
 			});
-			this._drawReqeusted = true;
+			this.invalidateSize();
 		}
 
 		setInitialPage(typeOfPage: any): void {
@@ -1419,6 +1448,10 @@
 
 
 		invalidationManager(): IInvalidationManager { return this._invalidationManager; }
+
+		private invalidateSize() {
+			((this._navigator.topPage() as any) as ui.core.IInvalidate).invalidateLayout();
+		}
 	}
 
 

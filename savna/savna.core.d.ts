@@ -247,7 +247,7 @@ declare namespace $avna {
                 measureRequest(availableSize: Size): Size;
                 renderingRequest(g: Graphics): void;
             }
-            class VisualComponent extends EventEmitter implements IVisualComponent {
+            class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
                 static DepthLevel(obj: any): number;
                 private _x;
                 private _y;
@@ -269,6 +269,10 @@ declare namespace $avna {
                 renderingRequest(g: Graphics): void;
                 protected internalDraw(g: Graphics): void;
                 protected drawOverride(g: Graphics): boolean;
+                invalidateState(): void;
+                invalidateLayout(): void;
+                validateState(): void;
+                validateLayout(): void;
             }
             interface IContainer extends IVisualComponent {
                 addChild(child: VisualComponent): VisualComponent;
@@ -301,7 +305,7 @@ declare namespace $avna {
                 topPage(): ui.core.IPage;
                 setAppId(appid: string): void;
             }
-            class UIComponent extends VisualComponent implements IInvalidate {
+            class UIComponent extends VisualComponent {
                 private _enabled;
                 private _width;
                 private _height;
@@ -314,22 +318,22 @@ declare namespace $avna {
                 private _explicitHeight;
                 protected layoutInvalid: Boolean;
                 protected stateInvalid: Boolean;
-                protected stateChanged: Boolean;
-                protected sizeChange: Boolean;
+                protected sizeChanged: Boolean;
                 constructor();
                 protected init(): void;
                 invalidateState(): void;
                 invalidateLayout(): void;
                 validateState(): void;
                 validateLayout(): void;
+                protected commitState(): void;
+                protected updateLayout(w: number, h: number): void;
                 minWidth: number;
                 minHeight: number;
                 enabled: boolean;
                 setPosition(x: number, y: number): void;
                 setActualSize(width: number, height: number): void;
                 childChanged(child?: VisualComponent): boolean;
-                protected notifyLayoutChangedToParents(): void;
-                protected notifyToParentLayoutChanged(): void;
+                protected notifyLayoutInfoChangedToParents(): void;
                 protected flushCache(): void;
                 getWidth(): number;
                 setWidth(w: number): void;
@@ -396,11 +400,15 @@ declare namespace $avna {
         toString(): string;
     }
     interface IInvalidationManager {
+        doFrame(): boolean;
+        invalidLayout(ele: ui.core.IInvalidate, priority: number): void;
+        invalidState(ele: ui.core.IInvalidate, priority: number): void;
+        validateLayout(): void;
+        validateState(): void;
     }
     interface IApplication extends IEventEmitter {
         start(): void;
         mouseHandler(arg: UserMouseEventArg): void;
-        requestRedraw(): void;
         isInitialized(): boolean;
         setSize(width: number, height: number): void;
         setLoopInterval(interval: number): void;

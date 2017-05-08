@@ -1,10 +1,11 @@
 ﻿
--  InvalidationManager Implement
 -  imple IInavlidate in UIComponent
 
 -  ILayout
 
 ==========================
+-  Changed on ImpleApplication
+-  InvalidationManager Implement
 -  IInvalidate and implement
 -  Application.invalidationManager() : IInvalidationManager
 -  IInvalidate add major methods

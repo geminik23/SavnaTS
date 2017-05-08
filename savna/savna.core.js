@@ -704,6 +704,10 @@ var $avna;
                 };
                 VisualComponent.prototype.internalDraw = function (g) { };
                 VisualComponent.prototype.drawOverride = function (g) { return false; };
+                VisualComponent.prototype.invalidateState = function () { };
+                VisualComponent.prototype.invalidateLayout = function () { };
+                VisualComponent.prototype.validateState = function () { };
+                VisualComponent.prototype.validateLayout = function () { };
                 return VisualComponent;
             }(EventEmitter));
             core.VisualComponent = VisualComponent;
@@ -720,27 +724,40 @@ var $avna;
                     return _this;
                 }
                 UIComponent.prototype.init = function () { };
-                /* ::interface:: IInvalidate*/
+                /* BEGIN ::interface:: IInvalidate*/
                 UIComponent.prototype.invalidateState = function () {
                     if (!this.stateInvalid && this.parent != null) {
                         this.stateInvalid = true;
+                        this.currentApplication.invalidationManager().invalidState(this, this.depthLevel);
                     }
                 };
                 UIComponent.prototype.invalidateLayout = function () {
-                    //TODO
+                    if (!this.layoutInvalid && this.parent != null) {
+                        this.layoutInvalid = true;
+                        this.currentApplication.invalidationManager().invalidLayout(this, this.depthLevel);
+                    }
                 };
                 UIComponent.prototype.validateState = function () {
-                    //TODO
+                    if (this.stateInvalid) {
+                        this.commitState();
+                        this.stateInvalid = false;
+                    }
                 };
                 UIComponent.prototype.validateLayout = function () {
-                    //TODO
+                    if (this.layoutInvalid) {
+                        this.updateLayout(this._width, this._height);
+                        this.layoutInvalid = false;
+                    }
                 };
+                UIComponent.prototype.commitState = function () { };
+                UIComponent.prototype.updateLayout = function (w, h) { };
                 Object.defineProperty(UIComponent.prototype, "minWidth", {
+                    /* END ::interface:: IInvalidate */
                     get: function () { return this._minWidth; },
                     set: function (width) {
                         if (this._minWidth != width) {
                             this._minWidth = width;
-                            this.notifyLayoutChangedToParents();
+                            this.notifyLayoutInfoChangedToParents();
                         }
                         return;
                     },
@@ -752,7 +769,7 @@ var $avna;
                     set: function (height) {
                         if (this._minHeight != height) {
                             this._minHeight = height;
-                            this.notifyLayoutChangedToParents();
+                            this.notifyLayoutInfoChangedToParents();
                         }
                         return;
                     },
@@ -768,7 +785,7 @@ var $avna;
                             return;
                         }
                         this._enabled = enable;
-                        this.stateChanged = true;
+                        this.stateInvalid = true;
                         this.invalidateState();
                     },
                     enumerable: true,
@@ -782,13 +799,13 @@ var $avna;
                 UIComponent.prototype.setActualSize = function (width, height) {
                     if (this._width != width) {
                         this._width = height;
-                        this.sizeChange = true;
+                        this.sizeChanged = true;
                     }
                     if (this._height != height) {
                         this._height = height;
-                        this.sizeChange = true;
+                        this.sizeChanged = true;
                     }
-                    if (this.sizeChange) {
+                    if (this.sizeChanged) {
                         this.invalidateState();
                         this.invalidateLayout();
                     }
@@ -797,7 +814,7 @@ var $avna;
                     if (child === void 0) { child = null; }
                     return true;
                 };
-                UIComponent.prototype.notifyLayoutChangedToParents = function () {
+                UIComponent.prototype.notifyLayoutInfoChangedToParents = function () {
                     if (!this.parent)
                         return;
                     var cur = this;
@@ -809,13 +826,11 @@ var $avna;
                         cur = p;
                     }
                 };
-                UIComponent.prototype.notifyToParentLayoutChanged = function () {
-                    if (!this.parent)
-                        return;
-                    var p = this.parent;
-                    if (p && p.childChanged(null))
-                        p.notifyLayoutChangedToParents();
-                };
+                //protected notifyToParentLayoutChanged(): void {
+                //	if (!this.parent) return;
+                //	let p = this.parent as UIComponent;
+                //	if (p && p.childChanged(null)) p.notifyLayoutInfoChangedToParents();
+                //}
                 UIComponent.prototype.flushCache = function () { return; };
                 UIComponent.prototype.getWidth = function () { return this._width; };
                 UIComponent.prototype.setWidth = function (w) {
@@ -824,7 +839,7 @@ var $avna;
                     }
                     if (this._width != w) {
                         this._width = w;
-                        this.sizeChange = true;
+                        this.sizeChanged = true;
                         this.invalidateLayout();
                     }
                 };
@@ -835,7 +850,7 @@ var $avna;
                     }
                     if (this._height != h) {
                         this._height = h;
-                        this.sizeChange = true;
+                        this.sizeChanged = true;
                         this.invalidateLayout();
                     }
                 };
@@ -1029,6 +1044,37 @@ var $avna;
     var InvalidationManager = (function () {
         function InvalidationManager() {
         }
+        InvalidationManager.prototype.doFrame = function () {
+            return this.doValidation();
+        };
+        InvalidationManager.prototype.doValidation = function () {
+            this._validating = true;
+            var validated = !this._stateQueue.isEmpty() || !this._viewQueue.isEmpty();
+            if (validated) {
+                this.validateState();
+                this.validateLayout();
+            }
+            this._validating = false;
+            return validated;
+        };
+        InvalidationManager.prototype.invalidLayout = function (ele, priority) {
+            this._viewQueue.push(ele, priority);
+        };
+        InvalidationManager.prototype.invalidState = function (ele, priority) {
+            this._stateQueue.push(ele, priority);
+        };
+        InvalidationManager.prototype.validateLayout = function () {
+            var item = null;
+            while ((item = this._viewQueue.popMaxPriorityItem()) != null) {
+                item.validateLayout();
+            }
+        };
+        InvalidationManager.prototype.validateState = function () {
+            var item = null;
+            while ((item = this._viewQueue.popMaxPriorityItem()) != null) {
+                item.validateState();
+            }
+        };
         return InvalidationManager;
     }());
     //
@@ -1052,7 +1098,6 @@ var $avna;
             _this._loopEngine = new LoopEngine();
             _this._invalidationManager = new InvalidationManager();
             /* states */
-            _this._drawReqeusted = false;
             _this._looping = false;
             _this._step_timer = new ManualTimer();
             /* contents*/
@@ -1108,7 +1153,7 @@ var $avna;
             // process tasks
             this._taskHandlers.processTasks();
             // check redraw and draw
-            if (this._looping || this._drawReqeusted) {
+            if (this._looping || this._invalidationManager.doFrame()) {
                 this._graphics.stepTime = this._step_timer.sinceLastLap();
                 this._step_timer.lap();
                 // draw content
@@ -1119,8 +1164,6 @@ var $avna;
                     this._graphics.boundRect.height = this._graphics.context.canvas.height;
                     p.renderingRequest(this._graphics);
                 }
-                //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-                this._drawReqeusted = false;
             }
         };
         //
@@ -1135,9 +1178,6 @@ var $avna;
         ImpleApplication.prototype.mouseHandler = function (arg) {
             //TODO
             //console.log(arg.toString());
-        };
-        ImpleApplication.prototype.requestRedraw = function () {
-            this._drawReqeusted = true;
         };
         ImpleApplication.prototype.setAnimating = function (animate) { this._looping = animate; };
         ImpleApplication.prototype.getAnimating = function () { return this._looping; };
@@ -1155,12 +1195,15 @@ var $avna;
                 _this._graphics.context.canvas.height = height;
                 //TODO layout ???may be PageNavigator
             });
-            this._drawReqeusted = true;
+            this.invalidateSize();
         };
         ImpleApplication.prototype.setInitialPage = function (typeOfPage) {
             this._navigator.initialPage(typeOfPage);
         };
         ImpleApplication.prototype.invalidationManager = function () { return this._invalidationManager; };
+        ImpleApplication.prototype.invalidateSize = function () {
+            this._navigator.topPage().invalidateLayout();
+        };
         return ImpleApplication;
     }(EventEmitter));
     var PageNavigator = (function () {
