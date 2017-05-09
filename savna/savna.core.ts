@@ -1450,7 +1450,8 @@
 		invalidationManager(): IInvalidationManager { return this._invalidationManager; }
 
 		private invalidateSize() {
-			((this._navigator.topPage() as any) as ui.core.IInvalidate).invalidateLayout();
+			let topPage = (this._navigator.topPage() as any);
+			if(topPage)	(topPage as ui.core.IInvalidate).invalidateLayout();
 		}
 	}
 

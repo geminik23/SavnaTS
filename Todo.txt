@@ -1,9 +1,13 @@
-﻿
--  imple IInavlidate in UIComponent
-
+﻿-  Rectnagle::Drawing Basic Geometry Component
 -  ILayout
+-  Layout in Container class
+-  Arragement -> Stack, Grid, ...
 
+-  Skinnable
+-  Layout
+-  
 ==========================
+-  Rectangle Element (for testing)
 -  Changed on ImpleApplication
 -  InvalidationManager Implement
 -  IInvalidate and implement

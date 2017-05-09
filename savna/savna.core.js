@@ -1202,7 +1202,9 @@ var $avna;
         };
         ImpleApplication.prototype.invalidationManager = function () { return this._invalidationManager; };
         ImpleApplication.prototype.invalidateSize = function () {
-            this._navigator.topPage().invalidateLayout();
+            var topPage = this._navigator.topPage();
+            if (topPage)
+                topPage.invalidateLayout();
         };
         return ImpleApplication;
     }(EventEmitter));
