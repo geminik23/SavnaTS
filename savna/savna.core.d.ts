@@ -247,7 +247,7 @@ declare namespace $avna {
                 measureRequest(availableSize: Size): Size;
                 renderingRequest(g: Graphics): void;
             }
-            class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
+            abstract class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
                 static DepthLevel(obj: any): number;
                 private _x;
                 private _y;
@@ -269,10 +269,10 @@ declare namespace $avna {
                 renderingRequest(g: Graphics): void;
                 protected internalDraw(g: Graphics): void;
                 protected drawOverride(g: Graphics): boolean;
-                invalidateState(): void;
-                invalidateLayout(): void;
-                validateState(): void;
-                validateLayout(): void;
+                abstract invalidateState(): void;
+                abstract invalidateLayout(): void;
+                abstract validateState(): void;
+                abstract validateLayout(): void;
             }
             interface IContainer extends IVisualComponent {
                 addChild(child: VisualComponent): VisualComponent;
@@ -367,6 +367,8 @@ declare namespace $avna {
                 setActualSize(w: number, h: number): void;
                 private boundChanged();
                 private structureChange();
+                protected internalMeasure(available: Size): Size;
+                protected internalDraw(g: Graphics): void;
             }
             class StyleComponent extends UIComponent {
             }

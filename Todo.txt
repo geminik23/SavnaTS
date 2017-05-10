@@ -1,4 +1,6 @@
-﻿-  Rectnagle::Drawing Basic Geometry Component
+﻿
+-  setter Position and Size
+
 -  ILayout
 -  Layout in Container class
 -  Arragement -> Stack, Grid, ...
@@ -7,6 +9,8 @@
 -  Layout
 -  
 ==========================
+-  Container : translate
+-  Rectnagle::Drawing Basic Geometry Component
 -  Rectangle Element (for testing)
 -  Changed on ImpleApplication
 -  InvalidationManager Implement

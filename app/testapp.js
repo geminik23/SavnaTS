@@ -10,11 +10,12 @@ var TestApp;
         function Rectangle() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        Rectangle.prototype.internalDraw = function (g) {
+        Rectangle.prototype.drawOverride = function (g) {
             var ctx = g.context;
             var rect = g.boundRect;
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(rect.x, rect.y, 100, 100);
+            return false;
         };
         return Rectangle;
     }($avna.ui.core.UIComponent));
@@ -25,14 +26,17 @@ var TestApp;
             return _super !== null && _super.apply(this, arguments) || this;
         }
         MainPage.prototype.initializeUI = function () {
-            this.addChild(new Rectangle());
+            var rect = new Rectangle();
+            rect.x = 100;
+            rect.y = 200;
+            this.addChild(rect);
         };
         MainPage.prototype.drawOverride = function (g) {
             var ctx = g.context;
             var rect = g.boundRect;
             ctx.fillStyle = "#000000";
             ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-            return true;
+            return false;
         };
         return MainPage;
     }($avna.ui.core.Page));

@@ -727,7 +727,7 @@
 
 
 
-	
+
 
 
 	//
@@ -781,7 +781,7 @@
 				renderingRequest(g: Graphics): void;
 			}
 
-			export class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
+			export abstract class VisualComponent extends EventEmitter implements IVisualComponent, IInvalidate {
 				static DepthLevel(obj: any): number {
 					if (obj instanceof VisualComponent) return (obj as VisualComponent).depthLevel;
 					return -1;
@@ -807,7 +807,7 @@
 
 				setParent(parent: VisualComponent): void {
 					this.parent = parent;
-					
+
 					if (parent != null) {
 						this._depthLevel = parent.depthLevel + 1;
 						this.appId = parent.currentAppId;
@@ -831,10 +831,11 @@
 				protected drawOverride(g: Graphics): boolean { return false; }
 
 
-				invalidateState(): void{}
-				invalidateLayout(): void{}
-				validateState(): void{}
-				validateLayout(): void{}
+				abstract invalidateState(): void;
+				abstract invalidateLayout(): void;
+				abstract validateState(): void;
+				abstract validateLayout(): void;
+
 			}
 
 
@@ -870,12 +871,12 @@
 				goBack(): void;
 				pageCount(): number;
 				topPage(): ui.core.IPage;
-				setAppId(appid:string): void;
+				setAppId(appid: string): void;
 			}
 
 
 
-			export class UIComponent extends VisualComponent{
+			export class UIComponent extends VisualComponent {
 				private _enabled: boolean;
 				private _width: number;
 				private _height: number;
@@ -896,7 +897,7 @@
 
 				constructor() { super(); this.init(); }
 
-				protected init() {}
+				protected init() { }
 
 				/* BEGIN ::interface:: IInvalidate*/
 				invalidateState(): void {
@@ -924,13 +925,13 @@
 					}
 				}
 
-				protected commitState(): void {/* will implement in subclass */}
+				protected commitState(): void {/* will implement in subclass */ }
 
 				protected updateLayout(w: number, h: number): void {/* will implement in subclass */ }
 
 				/* END ::interface:: IInvalidate */
 
-				
+
 
 				get minWidth(): number { return this._minWidth; }
 				set minWidth(width: number) {
@@ -1141,9 +1142,36 @@
 				private structureChange(): void {
 					//TODO
 				}
+
+
+				protected internalMeasure(available: Size): Size {
+					//TODO
+					let p = this._childContainer.begin();
+					while (p != null) {
+						//TODO update bound
+
+						p.element.measureRequest(available);
+						p = p.next;
+					}
+					return available;
+				}
+
+
+				protected internalDraw(g: Graphics): void {
+					//TODO
+					let p = this._childContainer.begin();
+					let ctx = g.context;
+					while (p != null) {
+						//TODO update bound
+						ctx.save();
+						ctx.translate(p.element.x, p.element.y);
+						p.element.renderingRequest(g);
+						ctx.restore();
+						p = p.next;
+					}
+				}
+
 			}
-
-
 
 			export class StyleComponent extends UIComponent {
 
@@ -1233,21 +1261,21 @@
 
 
 
-	
-	
+
+
 	//
 	/* InvalidationManager */
 	//
 	export interface IInvalidationManager {
 		doFrame(): boolean;
 
-		invalidLayout(ele:ui.core.IInvalidate, priority:number): void;
+		invalidLayout(ele: ui.core.IInvalidate, priority: number): void;
 		invalidState(ele: ui.core.IInvalidate, priority: number): void;
 		validateLayout(): void;
 		validateState(): void;
 	}
 
-	class InvalidationManager implements IInvalidationManager{
+	class InvalidationManager implements IInvalidationManager {
 		private _stateQueue: PriorityQueue<ui.core.VisualComponent>;
 		private _viewQueue: PriorityQueue<ui.core.VisualComponent>;
 		private _validating: boolean;
@@ -1258,12 +1286,12 @@
 			return this.doValidation();
 		}
 
-		private doValidation() :boolean{
+		private doValidation(): boolean {
 			this._validating = true;
 			let validated = !this._stateQueue.isEmpty() || !this._viewQueue.isEmpty();
 			if (validated) {
 				this.validateState();
-				this.validateLayout();		
+				this.validateLayout();
 			}
 
 			this._validating = false;
@@ -1451,7 +1479,7 @@
 
 		private invalidateSize() {
 			let topPage = (this._navigator.topPage() as any);
-			if(topPage)	(topPage as ui.core.IInvalidate).invalidateLayout();
+			if (topPage) (topPage as ui.core.IInvalidate).invalidateLayout();
 		}
 	}
 

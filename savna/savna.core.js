@@ -704,10 +704,6 @@ var $avna;
                 };
                 VisualComponent.prototype.internalDraw = function (g) { };
                 VisualComponent.prototype.drawOverride = function (g) { return false; };
-                VisualComponent.prototype.invalidateState = function () { };
-                VisualComponent.prototype.invalidateLayout = function () { };
-                VisualComponent.prototype.validateState = function () { };
-                VisualComponent.prototype.validateLayout = function () { };
                 return VisualComponent;
             }(EventEmitter));
             core.VisualComponent = VisualComponent;
@@ -977,6 +973,29 @@ var $avna;
                 };
                 Container.prototype.structureChange = function () {
                     //TODO
+                };
+                Container.prototype.internalMeasure = function (available) {
+                    //TODO
+                    var p = this._childContainer.begin();
+                    while (p != null) {
+                        //TODO update bound
+                        p.element.measureRequest(available);
+                        p = p.next;
+                    }
+                    return available;
+                };
+                Container.prototype.internalDraw = function (g) {
+                    //TODO
+                    var p = this._childContainer.begin();
+                    var ctx = g.context;
+                    while (p != null) {
+                        //TODO update bound
+                        ctx.save();
+                        ctx.translate(p.element.x, p.element.y);
+                        p.element.renderingRequest(g);
+                        ctx.restore();
+                        p = p.next;
+                    }
                 };
                 return Container;
             }(UIComponent));
